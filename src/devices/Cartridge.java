@@ -1,3 +1,5 @@
+package devices;
+
 public final class Cartridge {
     public byte[] logo; // nintendo logo
     public String title;
