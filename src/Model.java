@@ -2,21 +2,20 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Optional;
 
 public class Model {
     public static void main(String[] args) {
         try {
             final var headerInfo = Model.loadCartridge("./roms/gb-hello-world/helloworld/hello-world.gb");
             //final var headerInfo = Model.loadCartridge("./roms/cpu_instrs/cpu_instrs.gb");
-            if (headerInfo != null) {
-                System.out.println(headerInfo);
-            }
+            headerInfo.ifPresent(System.out::println);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static Cartridge loadCartridge(final String filePath) throws IOException {
+    public static Optional<Cartridge> loadCartridge(final String filePath) throws IOException {
         final var tmpRom = Files.readAllBytes(Path.of(filePath));
         var cartridge = new Cartridge();
         cartridge.logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
@@ -38,9 +37,9 @@ public class Model {
             checkSum = (byte) (checkSum - tmpRom[i] - 1);
         }
         if (checkSum != cartridge.headerCheckSum) {
-            return null;
+            return Optional.empty();
         }
         cartridge.rom = tmpRom;
-        return cartridge;
+        return Optional.of(cartridge);
     }
 }
