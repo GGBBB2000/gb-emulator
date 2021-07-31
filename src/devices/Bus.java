@@ -1,13 +1,20 @@
 package devices;
 
-public class Bus {
-    Byte[][] romBank = new Byte[2][16 * 1024]; // TODO: impl MBC
-    Byte[] wram = new Byte[8 * 1024]; // 8KiB  // TODO: メモリは外で定義したほうがよさそう
-    Byte[] vram = new Byte[16 * 1024]; // 16KiB
-    Byte[] extVram = new Byte[8 * 1024]; // 8KiB
-    Byte[] attributeTable = new Byte[0xA0]; // 0xFE00..0xFE9F分
+import org.jetbrains.annotations.NotNull;
 
-    public Bus() {
+public class Bus {
+    Byte[][] romBank; // TODO: impl MBC
+    Byte[] wram;
+    Byte[] vram;
+    Byte[] extVram; // 8KiB
+    Byte[] attributeTable;
+
+    public Bus(@NotNull final Cartridge cartridge) {
+        romBank = new Byte[2][16 * 1024]; // impl MBC
+        wram = new Byte[8 * 1024]; // 8KiB
+        vram = new Byte[16 * 1024]; // 16KiB
+        extVram = new Byte[8 * 1024]; // 16KiB
+        attributeTable = new Byte[0xA0]; // 0xFE00..0xFE9F分
     }
 
     public void write(final int addr, final Byte data) {

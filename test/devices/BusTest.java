@@ -5,15 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BusTest {
-    final Bus bus = new Bus();
-    @Test
-    void romIOTest() {
-        for (int addr = 0; addr < 0x8000; addr++) {
-            final byte val = (byte)(addr % 128);
-            bus.write(addr, val);
-            assertEquals(val, bus.read(addr));
-        }
-    }
+    final Bus bus = new Bus(new Cartridge());
 
     @Test
     void vramIOTest() {
