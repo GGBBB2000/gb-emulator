@@ -5,6 +5,7 @@ class Register {
     public int bc;
     public int de;
     public int hl;
+    public int sp;
     public int pc;
     public boolean z;
     public boolean c; // carry
@@ -16,6 +17,7 @@ class Register {
         bc = 0;
         de = 0;
         hl = 0;
+        sp = 0xFFFE;
         pc = 0x100; // entry point
         z = false;
         c = false;
