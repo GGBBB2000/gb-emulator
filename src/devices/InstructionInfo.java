@@ -7,6 +7,7 @@ enum Params {
     IN_B, // (B)
     C,
     IN_C, // (C)
+    INDEXED_C, // ($0xFFF0 + C)
     BC,
     D,
     IN_D, // (D)
@@ -20,6 +21,7 @@ enum Params {
     IN_L, // (L)
     NN(0),   //  immediate absolute address 2byte
     N(0),    //  immediate value 1byte
+    INDEXED_N(0), // N(1 byte) + 0xFF00
     SP,   //  stack pointer
     NONE;
 
@@ -31,7 +33,7 @@ enum Params {
     Params() { }
 
     public void setImmediateVal(int immediateVal) {
-        this.immediateVal = immediateVal;
+        this.immediateVal = (this == Params.INDEXED_N) ? 0xFF00 + immediateVal : immediateVal;
     }
 
     @Override
@@ -45,6 +47,8 @@ enum Params {
 
 enum Instruction {
     LD,
+    LDD, // same as LD A, (HL-) ... LD A, (HLD)
+    LDI, // same as LD A, (HL+) ... LD A, (HLI)
     PUSH,
     POP,
     ADD,
@@ -88,8 +92,6 @@ enum Instruction {
     RETI,
     RST,
     ILL, // Illegal
-    LDD, // same as LD A, (HL-) ... LD A, (HLD)
-    LDI, // same as LD A, (HL+) ... LD A, (HLI)
 }
 
 public record InstructionInfo(int op, Instruction instruction, Params to, Params from,
@@ -625,7 +627,7 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
             case NONE ->  "";
             default -> this.from;
         };
-        return String.format("%s %s %s", inst, to, from);
+        return String.format("(0x%02X) %s %s %s", op, inst, to, from);
     }
 
     public static InstructionInfo getInstruction(int op) {
