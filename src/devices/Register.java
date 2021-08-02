@@ -83,7 +83,7 @@ class Register {
 
     @Override
     public String toString() {
-        return "Register{" +
+        return "{" +
                 "pc=" + String.format("0x%04X",pc) +
                 ", a=" + String.format("0x%X", a) +
                 ", bc=" + String.format("0x%X", bc) +
