@@ -1,28 +1,29 @@
 package devices;
 
 class Register {
-    public byte a;
+    public int af;
     public int bc;
     public int de;
     public int hl;
     public int sp;
     public int pc;
-    public boolean z;
-    public boolean c; // carry
-    public boolean n; // negative
-    public boolean h; // half carry
+
 
     Register() {
-        a = 0;
+        af = 0;
         bc = 0;
         de = 0;
         hl = 0;
         sp = 0xFFFE;
         pc = 0x100; // entry point
-        z = false;
-        c = false;
-        n = false;
-        h = false;
+    }
+
+    public byte getA() { return (byte) ((af & 0xFF00) >> 8); }
+
+    public void setA(byte data) {
+        final var upper = data << 8;
+        final var lower = this.af & 0xFF;
+        this.af = upper | lower;
     }
 
     public byte getB() {
@@ -81,18 +82,50 @@ class Register {
         this.hl = upper | data;
     }
 
+    public byte getZ() {
+        return (byte)((this.af & 0b1000_0000) >> 7);
+    }
+
+    public void setZ(boolean result) {
+        this.af |= 0b1000_0000;
+    }
+
+    public byte getN() {
+        return (byte)((this.af & 0b0100_0000) >> 6);
+    }
+
+    public void setN(boolean result) {
+        this.af |= 0b0100_0000;
+    }
+
+    public byte getHC() { // half carry flag
+        return (byte)((this.af & 0b0010_0000) >> 5);
+    }
+
+    public void setHC(boolean result) {
+        this.af |= 0b0010_0000;
+    }
+
+    public byte getFC() { // carry flag
+        return (byte)((this.af & 0b0001_0000) >> 4);
+    }
+
+    public void setFC(boolean result) {
+        this.af |= 0b0001_0000;
+    }
+
     @Override
     public String toString() {
         return "{" +
                 "pc=" + String.format("0x%04X",pc) +
-                ", a=" + String.format("0x%X", a) +
+                ", a=" + String.format("0x%X", getA()) +
                 ", bc=" + String.format("0x%X", bc) +
                 ", de=" + String.format("0x%X", de) +
                 ", hl=" + String.format("0x%X", hl) +
-                ", z=" + z +
-                ", c=" + c +
-                ", n=" + n +
-                ", h=" + h +
+                ", z=" + getZ() +
+                ", n=" + getN() +
+                ", h=" + getHC() +
+                ", c=" + getFC() +
                 '}';
     }
 }
