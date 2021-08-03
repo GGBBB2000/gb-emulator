@@ -2,36 +2,30 @@ package devices;
 
 enum Params {
     A,
-    IN_A, // (A) register-indirect addressing
+    AF,
     B,
-    IN_B, // (B)
     C,
-    IN_C, // (C)
     INDEXED_C, // ($0xFFF0 + C)
     BC,
     D,
-    IN_D, // (D)
     E,
-    IN_E, // (E)
     DE,
     H,
-    IN_H, // (H)
     L,
     HL,
-    IN_L, // (L)
-    NN(0),   //  immediate absolute address 2byte
-    N(0),    //  immediate value 1byte
-    INDEXED_N(0), // N(1 byte) + 0xFF00
+    NN,   //  immediate absolute address 2byte
+    N,    //  immediate value 1byte
+    INDEXED_N, // N(1 byte) + 0xFF00
     SP,   //  stack pointer
+    INDEXED_SP,
+    PC,
+    CC_NZ, // condition flag argument
+    CC_Z,
+    CC_NC,
+    CC_C,
     NONE;
 
     private int immediateVal;
-    Params(int immediateVal) {
-        this.immediateVal = immediateVal;
-    }
-
-    Params() { }
-
     public void setImmediateVal(int immediateVal) {
         this.immediateVal = (this == Params.INDEXED_N) ? 0xFF00 + immediateVal : immediateVal;
     }
@@ -49,6 +43,7 @@ enum Params {
 
 enum Instruction {
     LD,
+    WLD, // For simplifying impl 16bit LD
     LDD, // same as LD A, (HL-) ... LD A, (HLD)
     LDI, // same as LD A, (HL+) ... LD A, (HLI)
     PUSH,
@@ -100,14 +95,14 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
                               int cycle) {
     private final static InstructionInfo[] instArr = {
             new InstructionInfo(0x00, Instruction.NOP, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x01, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0x01, Instruction.WLD, Params.BC, Params.NN, 12),
             new InstructionInfo(0x02, Instruction.LD, Params.BC, Params.A, 8),
             new InstructionInfo(0x03, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x04, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x05, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x06, Instruction.LD, Params.B, Params.N, 8),
             new InstructionInfo(0x07, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x08, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0x08, Instruction.WLD, Params.NN, Params.SP, 20),
             new InstructionInfo(0x09, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x0A, Instruction.LD, Params.A, Params.BC, 8),
             new InstructionInfo(0x0B, Instruction.ILL, Params.NONE, Params.NONE, 1),
@@ -116,7 +111,7 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
             new InstructionInfo(0x0E, Instruction.LD, Params.C, Params.N, 8),
             new InstructionInfo(0x0F, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x10, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x11, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0x11, Instruction.WLD, Params.DE, Params.NN, 12),
             new InstructionInfo(0x12, Instruction.LD, Params.DE, Params.A, 8),
             new InstructionInfo(0x13, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x14, Instruction.ILL, Params.NONE, Params.NONE, 1),
@@ -131,15 +126,15 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
             new InstructionInfo(0x1D, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x1E, Instruction.LD, Params.E, Params.N, 8),
             new InstructionInfo(0x1F, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x20, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x21, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0x20, Instruction.JR, Params.CC_NZ, Params.N, 8),
+            new InstructionInfo(0x21, Instruction.WLD, Params.HL, Params.NN, 12),
             new InstructionInfo(0x22, Instruction.LDI, Params.HL, Params.A, 8),
             new InstructionInfo(0x23, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x24, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x25, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x26, Instruction.LD, Params.H, Params.N, 8),
             new InstructionInfo(0x27, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x28, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0x28, Instruction.JR, Params.CC_Z, Params.N, 8),
             new InstructionInfo(0x29, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x2A, Instruction.LDI, Params.A, Params.HL, 8),
             new InstructionInfo(0x2B, Instruction.ILL, Params.NONE, Params.NONE, 1),
@@ -147,15 +142,15 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
             new InstructionInfo(0x2D, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x2E, Instruction.LD, Params.L, Params.N, 8),
             new InstructionInfo(0x2F, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x30, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x31, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0x30, Instruction.JR, Params.CC_NC, Params.N, 8),
+            new InstructionInfo(0x31, Instruction.WLD, Params.SP, Params.NN, 12),
             new InstructionInfo(0x32, Instruction.LDD, Params.HL, Params.A, 8),
             new InstructionInfo(0x33, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x34, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x35, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x36, Instruction.LD, Params.HL, Params.N, 12),
             new InstructionInfo(0x37, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x38, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0x38, Instruction.JR, Params.CC_C, Params.N, 8),
             new InstructionInfo(0x39, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x3A, Instruction.LDD, Params.A, Params.HL, 8),
             new InstructionInfo(0x3B, Instruction.ILL, Params.NONE, Params.NONE, 1),
@@ -227,14 +222,14 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
             new InstructionInfo(0x7D, Instruction.LD, Params.A, Params.L, 4),
             new InstructionInfo(0x7E, Instruction.LD, Params.A, Params.HL, 8),
             new InstructionInfo(0x7F, Instruction.LD, Params.A, Params.A, 4),
-            new InstructionInfo(0x80, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x81, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x82, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x83, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x84, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x85, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x86, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0x87, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0x80, Instruction.ADD, Params.A, Params.B, 4),
+            new InstructionInfo(0x81, Instruction.ADD, Params.A, Params.C, 4),
+            new InstructionInfo(0x82, Instruction.ADD, Params.A, Params.D, 4),
+            new InstructionInfo(0x83, Instruction.ADD, Params.A, Params.E, 4),
+            new InstructionInfo(0x84, Instruction.ADD, Params.A, Params.H, 4),
+            new InstructionInfo(0x85, Instruction.ADD, Params.A, Params.L, 4),
+            new InstructionInfo(0x86, Instruction.ADD, Params.A, Params.HL, 8),
+            new InstructionInfo(0x87, Instruction.ADD, Params.A, Params.A, 4),
             new InstructionInfo(0x88, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x89, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0x8A, Instruction.ILL, Params.NONE, Params.NONE, 1),
@@ -283,21 +278,21 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
             new InstructionInfo(0xB5, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xB6, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xB7, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xB8, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xB9, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xBA, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xBB, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xBC, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xBD, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xBE, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xBF, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xB8, Instruction.CP, Params.A, Params.B, 4),
+            new InstructionInfo(0xB9, Instruction.CP, Params.A, Params.C, 4),
+            new InstructionInfo(0xBA, Instruction.CP, Params.A, Params.D, 4),
+            new InstructionInfo(0xBB, Instruction.CP, Params.A, Params.E, 4),
+            new InstructionInfo(0xBC, Instruction.CP, Params.A, Params.H, 4),
+            new InstructionInfo(0xBD, Instruction.CP, Params.A, Params.L, 4),
+            new InstructionInfo(0xBE, Instruction.CP, Params.A, Params.HL, 8),
+            new InstructionInfo(0xBF, Instruction.CP, Params.A, Params.A, 4),
             new InstructionInfo(0xC0, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xC1, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xC1, Instruction.POP, Params.BC, Params.SP, 12),
             new InstructionInfo(0xC2, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xC3, Instruction.JP, Params.NN, Params.NONE, 12),
+            new InstructionInfo(0xC3, Instruction.JP, Params.PC, Params.NN, 12),
             new InstructionInfo(0xC4, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xC5, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xC6, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xC5, Instruction.PUSH, Params.SP, Params.BC, 16),
+            new InstructionInfo(0xC6, Instruction.ADD, Params.A, Params.N, 8),
             new InstructionInfo(0xC7, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xC8, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xC9, Instruction.ILL, Params.NONE, Params.NONE, 1),
@@ -308,11 +303,11 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
             new InstructionInfo(0xCE, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xCF, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xD0, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xD1, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xD1, Instruction.POP, Params.DE, Params.SP, 12),
             new InstructionInfo(0xD2, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xD3, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xD4, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xD5, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xD5, Instruction.PUSH, Params.SP, Params.DE, 16),
             new InstructionInfo(0xD6, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xD7, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xD8, Instruction.ILL, Params.NONE, Params.NONE, 1),
@@ -323,37 +318,37 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
             new InstructionInfo(0xDD, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xDE, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xDF, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xE0, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xE1, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xE0, Instruction.LD, Params.INDEXED_N, Params.A, 12),
+            new InstructionInfo(0xE1, Instruction.POP, Params.HL, Params.SP, 12),
             new InstructionInfo(0xE2, Instruction.LD, Params.INDEXED_C, Params.A, 8),
             new InstructionInfo(0xE3, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xE4, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xE4, Instruction.PUSH, Params.SP, Params.HL, 16),
             new InstructionInfo(0xE5, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xE6, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xE7, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xE8, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xE9, Instruction.JP, Params.NONE, Params.HL, 4),
+            new InstructionInfo(0xE9, Instruction.JP, Params.PC, Params.HL, 4),
             new InstructionInfo(0xEA, Instruction.LD, Params.NN, Params.A, 16),
             new InstructionInfo(0xEB, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xEC, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xED, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xEE, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xEF, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xF0, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xF1, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xF0, Instruction.LD, Params.A, Params.INDEXED_N, 12),
+            new InstructionInfo(0xF1, Instruction.POP, Params.AF, Params.SP, 12),
             new InstructionInfo(0xF2, Instruction.LD, Params.A, Params.INDEXED_C, 8),
             new InstructionInfo(0xF3, Instruction.DI, Params.NONE, Params.NONE, 4),
             new InstructionInfo(0xF4, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xF5, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xF5, Instruction.PUSH, Params.SP, Params.AF, 16),
             new InstructionInfo(0xF6, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xF7, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xF8, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xF9, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xF8, Instruction.LD, Params.HL, Params.INDEXED_SP, 1),
+            new InstructionInfo(0xF9, Instruction.WLD, Params.SP, Params.HL, 12),
             new InstructionInfo(0xFA, Instruction.LD, Params.A, Params.NN, 16),
             new InstructionInfo(0xFB, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xFC, Instruction.ILL, Params.NONE, Params.NONE, 1),
             new InstructionInfo(0xFD, Instruction.ILL, Params.NONE, Params.NONE, 1),
-            new InstructionInfo(0xFE, Instruction.ILL, Params.NONE, Params.NONE, 1),
+            new InstructionInfo(0xFE, Instruction.CP, Params.A, Params.N, 8),
             new InstructionInfo(0xFF, Instruction.ILL, Params.NONE, Params.NONE, 1),
     };
 
@@ -620,12 +615,16 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
     public String toString() {
         final var inst = this.instruction.toString();
         final var to = switch (this.to) {
-            case IN_A, IN_B, IN_C, IN_D, IN_E, IN_H, IN_L, BC, DE, HL, NN -> "(" + this.to + ")";
+            case AF, BC, DE, HL, NN, SP -> "(" + this.to + ")";
+            case INDEXED_C -> "($0xFF00 + C)";
+            case INDEXED_N -> String.format("0x%X", this.from.getImmediateVal());
             case NONE ->  "";
             default -> this.to;
         };
         final var from = switch (this.from) {
-            case IN_A, IN_B, IN_C, IN_D, IN_E, IN_H, IN_L, BC, DE, HL, NN -> ", (" + this.from + ")";
+            case BC, DE, HL, NN -> ", (" + this.from + ")";
+            case INDEXED_C -> ", ($0xFF00 + C)";
+            case INDEXED_N -> String.format(", 0x%X", this.from.getImmediateVal());
             case NONE ->  "";
             default -> ", " + this.from;
         };
