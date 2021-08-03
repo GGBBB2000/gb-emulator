@@ -1,22 +1,37 @@
+import devices.Bus;
+import devices.Cartridge;
+import devices.Cpu;
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Optional;
 
 public class Model {
+    Cpu cpu;
+
+    public Model(@NotNull Cartridge cartridge) {
+        final var cpuBus = new Bus(cartridge);
+        this.cpu = new Cpu(cpuBus);
+    }
+
     public static void main(String[] args) {
-        try {
-            final var headerInfo = Model.loadCartridge("./roms/gb-hello-world/helloworld/hello-world.gb");
-            //final var headerInfo = Model.loadCartridge("./roms/cpu_instrs/cpu_instrs.gb");
-            headerInfo.ifPresent(System.out::println);
-        } catch (IOException e) {
-            e.printStackTrace();
+        final var cartridge = Model.loadCartridge("./roms/gb-hello-world/helloworld/hello-world.gb");
+        //final var headerInfo = Model.loadCartridge("./roms/cpu_instrs/cpu_instrs.gb");
+        if (cartridge != null) {
+            Model model = new Model(cartridge);
+            model.run();
         }
     }
 
-    public static Optional<Cartridge> loadCartridge(final String filePath) throws IOException {
-        final var tmpRom = Files.readAllBytes(Path.of(filePath));
+    public static Cartridge loadCartridge(@NotNull final String filePath) {
+        byte[] tmpRom;
+        try {
+            tmpRom = Files.readAllBytes(Path.of(filePath));
+        } catch (IOException e) {
+            return null;
+        }
         var cartridge = new Cartridge();
         cartridge.logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
         cartridge.title = new String(Arrays.copyOfRange(tmpRom, 0x134, 0x144));
@@ -37,9 +52,13 @@ public class Model {
             checkSum = (byte) (checkSum - tmpRom[i] - 1);
         }
         if (checkSum != cartridge.headerCheckSum) {
-            return Optional.empty();
+            return null;
         }
         cartridge.rom = tmpRom;
-        return Optional.of(cartridge);
+        return cartridge;
+    }
+
+    public void run() {
+        cpu.stepByInst();
     }
 }
