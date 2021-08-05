@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Optional;
 
 public class GameBoy {
 
@@ -33,12 +32,12 @@ public class GameBoy {
         byte[] tmpRom;
         try {
             tmpRom = Files.readAllBytes(Path.of(filePath));
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
             pcs.firePropertyChange("loadFailed", false, true);
             return;
         }
-        var cartridge = new Cartridge();
+        final var cartridge = new Cartridge();
         cartridge.logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
         cartridge.title = new String(Arrays.copyOfRange(tmpRom, 0x134, 0x144));
         cartridge.manufactureCode = Arrays.copyOfRange(tmpRom, 0x13F, 0x143);
@@ -65,7 +64,7 @@ public class GameBoy {
         pcs.firePropertyChange("success", false, true);
     }
 
-    public void powerOn(@NotNull final String filePath) {
+    public void powerOn() {
         if (this.cartridge != null) {
             this.bus.mapRom(this.cartridge.rom);
             this.run();
