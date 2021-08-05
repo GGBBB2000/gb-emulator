@@ -1,4 +1,4 @@
-package devices;
+package Model;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -9,12 +9,15 @@ public class Bus {
     byte[] extVram; // 8KiB
     byte[] attributeTable;
 
-    public Bus(@NotNull final Cartridge cartridge) {
-        romBank = cartridge.rom;
-        wram = new byte[8 * 1024]; // 8KiB
-        vram = new byte[16 * 1024]; // 16KiB
-        extVram = new byte[8 * 1024]; // 16KiB
-        attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
+    public Bus() {
+        this.wram = new byte[8 * 1024]; // 8KiB
+        this.vram = new byte[16 * 1024]; // 16KiB
+        this.extVram = new byte[8 * 1024]; // 16KiB
+        this.attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
+    }
+
+    public void mapRom(final byte[] romBank) {
+        this.romBank = romBank;
     }
 
     public void write(final int addr, final Byte data) {

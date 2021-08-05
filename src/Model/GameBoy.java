@@ -1,36 +1,42 @@
-import devices.Bus;
-import devices.Cartridge;
-import devices.Cpu;
+package Model;
+
 import org.jetbrains.annotations.NotNull;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Optional;
 
-public class Model {
+public class GameBoy {
+
+    PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     Cpu cpu;
+    Bus bus;
+    Cartridge cartridge;
 
-    public Model(@NotNull Cartridge cartridge) {
-        final var cpuBus = new Bus(cartridge);
-        this.cpu = new Cpu(cpuBus);
+    public GameBoy() {
+        this.bus = new Bus();
+        this.cpu = new Cpu(this.bus);
+    }
+    public void addPropertyChangeListener(PropertyChangeListener propertyChangeListener) {
+        pcs.addPropertyChangeListener(propertyChangeListener);
     }
 
-    public static void main(String[] args) {
-        final var cartridge = Model.loadCartridge("./roms/gb-hello-world/helloworld/hello-world.gb");
-        //final var headerInfo = Model.loadCartridge("./roms/cpu_instrs/cpu_instrs.gb");
-        if (cartridge != null) {
-            Model model = new Model(cartridge);
-            model.run();
-        }
+    public void removePropertyChangeListener(PropertyChangeListener propertyChangeListener) {
+        pcs.removePropertyChangeListener(propertyChangeListener);
     }
 
-    public static Cartridge loadCartridge(@NotNull final String filePath) {
+    public void loadCartridge(@NotNull final String filePath) {
         byte[] tmpRom;
         try {
             tmpRom = Files.readAllBytes(Path.of(filePath));
-        } catch (IOException e) {
-            return null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            pcs.firePropertyChange("loadFailed", false, true);
+            return;
         }
         var cartridge = new Cartridge();
         cartridge.logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
@@ -52,10 +58,18 @@ public class Model {
             checkSum = (byte) (checkSum - tmpRom[i] - 1);
         }
         if (checkSum != cartridge.headerCheckSum) {
-            return null;
+            pcs.firePropertyChange("loadFailed", false, true);
         }
         cartridge.rom = tmpRom;
-        return cartridge;
+        this.cartridge = cartridge;
+        pcs.firePropertyChange("success", false, true);
+    }
+
+    public void powerOn(@NotNull final String filePath) {
+        if (this.cartridge != null) {
+            this.bus.mapRom(this.cartridge.rom);
+            this.run();
+        }
     }
 
     public void run() {

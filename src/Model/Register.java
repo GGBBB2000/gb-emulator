@@ -1,4 +1,4 @@
-package devices;
+package Model;
 
 class Register {
     public int af;

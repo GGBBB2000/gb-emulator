@@ -1,4 +1,4 @@
-package devices;
+package Model;
 
 enum Params {
     A,

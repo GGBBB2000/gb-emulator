@@ -1,11 +1,11 @@
-package devices;
+package Model;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class BusTest {
-    final Bus bus = new Bus(new Cartridge());
+    final Bus bus = new Bus();
 
     @Test
     void vramIOTest() {

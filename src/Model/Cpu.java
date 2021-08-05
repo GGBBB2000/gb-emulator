@@ -1,4 +1,4 @@
-package devices;
+package Model;
 
 import jdk.jshell.spi.ExecutionControl;
 
