@@ -1,8 +1,6 @@
 package Model;
 
-import org.jetbrains.annotations.NotNull;
-
-public class Bus {
+class Bus {
     byte[] romBank; // TODO: impl MBC
     byte[] wram;
     byte[] vram;

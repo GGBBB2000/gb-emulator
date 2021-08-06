@@ -7,7 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.concurrent.TimeUnit;
 
-public class PowerOnListener implements ActionListener {
+class PowerOnListener implements ActionListener {
     GameBoy model;
     MainGameView view;
 

@@ -38,4 +38,8 @@ public class MainGameView extends JFrame {
 
         return jMenuBar;
     }
+
+    public Screen getLcd () {
+        return this.lcd;
+    }
 }

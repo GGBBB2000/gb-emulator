@@ -91,7 +91,7 @@ enum Instruction {
     ILL, // Illegal
 }
 
-public record InstructionInfo(int op, Instruction instruction, Params to, Params from,
+record InstructionInfo(int op, Instruction instruction, Params to, Params from,
                               int cycle) {
     private final static InstructionInfo[] instArr = {
             new InstructionInfo(0x00, Instruction.NOP, Params.NONE, Params.NONE, 1),
@@ -631,11 +631,11 @@ public record InstructionInfo(int op, Instruction instruction, Params to, Params
         return String.format("(0x%02X) %s %s %s", op, inst, to, from);
     }
 
-    public static InstructionInfo getInstruction(int op) {
+    static InstructionInfo getInstruction(int op) {
         return InstructionInfo.instArr[op];
     }
 
-    public static InstructionInfo getCBPrefixedInstruction(int op) {
+    static InstructionInfo getCBPrefixedInstruction(int op) {
         return InstructionInfo.prefixedInstArr[op];
     }
 }

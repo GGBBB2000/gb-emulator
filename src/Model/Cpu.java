@@ -2,7 +2,7 @@ package Model;
 
 import jdk.jshell.spi.ExecutionControl;
 
-public class Cpu {
+class Cpu {
     Register register;
     Bus bus;
     boolean imeFlag;

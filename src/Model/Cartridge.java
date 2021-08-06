@@ -1,6 +1,6 @@
 package Model;
 
-public final class Cartridge {
+final class Cartridge {
     public byte[] logo; // nintendo logo
     public String title;
     public byte[] manufactureCode;

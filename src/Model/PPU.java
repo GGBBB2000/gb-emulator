@@ -1,6 +1,6 @@
 package Model;
 
-public class PPU {
+class PPU {
 
     /*
     FF40 - LCDC (R/W)
