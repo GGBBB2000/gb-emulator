@@ -16,6 +16,7 @@ public class MainGameController implements PropertyChangeListener  {
         this.view = view;
         final var menuBar = view.getJMenuBar();
         menuBar.getMenu(0).getItem(0).addActionListener(new FileLoader(view, model));
+        menuBar.getMenu(1).getItem(0).addActionListener(new PowerOnListener(view, model));
         this.model.addPropertyChangeListener(this);
     }
 
@@ -24,6 +25,9 @@ public class MainGameController implements PropertyChangeListener  {
         final var p =  evt.getPropertyName();
         if (p.equals("loadFiled")) {
             JOptionPane.showMessageDialog(this.view, "ファイルの読み込み中にエラーが発生しました", "loading error", JOptionPane.ERROR_MESSAGE);
+        } else if (p.equals("success")) {
+            // index 1 ...[Machine]
+            this.view.getJMenuBar().getMenu(1).getItem(0).setEnabled(true);
         }
     }
 }

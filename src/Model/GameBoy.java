@@ -8,10 +8,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class GameBoy {
-
     PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+    ScheduledExecutorService service;
     Cpu cpu;
     Bus bus;
     Cartridge cartridge;
@@ -19,7 +22,13 @@ public class GameBoy {
     public GameBoy() {
         this.bus = new Bus();
         this.cpu = new Cpu(this.bus);
+        this.service = Executors.newSingleThreadScheduledExecutor();
     }
+
+    public ScheduledExecutorService getService() {
+        return service;
+    }
+
     public void addPropertyChangeListener(PropertyChangeListener propertyChangeListener) {
         pcs.addPropertyChangeListener(propertyChangeListener);
     }
@@ -37,36 +46,36 @@ public class GameBoy {
             pcs.firePropertyChange("loadFailed", false, true);
             return;
         }
-        final var cartridge = new Cartridge();
-        cartridge.logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
-        cartridge.title = new String(Arrays.copyOfRange(tmpRom, 0x134, 0x144));
-        cartridge.manufactureCode = Arrays.copyOfRange(tmpRom, 0x13F, 0x143);
-        cartridge.cgbFlag = tmpRom[0x143];
-        cartridge.newLicenseeCode = Arrays.copyOfRange(tmpRom, 0x144, 0x146);
-        cartridge.sgbFlag = tmpRom[0x146];
-        cartridge.cartridgeType = tmpRom[0x147];
-        cartridge.romSize = tmpRom[0x148];
-        cartridge.ramSize = tmpRom[0x149];
-        cartridge.destinationCode = tmpRom[0x14A];
-        cartridge.oldLicenseeCode = tmpRom[0x14B];
-        cartridge.maskRomVersionNumber = tmpRom[0x14C];
-        cartridge.headerCheckSum = tmpRom[0x14D];
-        cartridge.globalCheckSum = Arrays.copyOfRange(tmpRom, 0x14E, 0x150);
+        final var cart = new Cartridge();
+        cart.logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
+        cart.title = new String(Arrays.copyOfRange(tmpRom, 0x134, 0x144));
+        cart.manufactureCode = Arrays.copyOfRange(tmpRom, 0x13F, 0x143);
+        cart.cgbFlag = tmpRom[0x143];
+        cart.newLicenseeCode = Arrays.copyOfRange(tmpRom, 0x144, 0x146);
+        cart.sgbFlag = tmpRom[0x146];
+        cart.cartridgeType = tmpRom[0x147];
+        cart.romSize = tmpRom[0x148];
+        cart.ramSize = tmpRom[0x149];
+        cart.destinationCode = tmpRom[0x14A];
+        cart.oldLicenseeCode = tmpRom[0x14B];
+        cart.maskRomVersionNumber = tmpRom[0x14C];
+        cart.headerCheckSum = tmpRom[0x14D];
+        cart.globalCheckSum = Arrays.copyOfRange(tmpRom, 0x14E, 0x150);
         byte checkSum = 0;
         for (int i = 0x134; i <= 0x14C; i++) {
             checkSum = (byte) (checkSum - tmpRom[i] - 1);
         }
-        if (checkSum != cartridge.headerCheckSum) {
+        if (checkSum != cart.headerCheckSum) {
             pcs.firePropertyChange("loadFailed", false, true);
         }
-        cartridge.rom = tmpRom;
-        this.cartridge = cartridge;
+        cart.rom = tmpRom;
+        this.bus.mapRom(cart.rom);
+        this.cartridge = cart;
         pcs.firePropertyChange("success", false, true);
     }
 
     public void powerOn() {
         if (this.cartridge != null) {
-            this.bus.mapRom(this.cartridge.rom);
             this.run();
         }
     }

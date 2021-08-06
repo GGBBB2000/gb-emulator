@@ -124,17 +124,17 @@ public class Cpu {
     }
 
     public int stepByInst() {
-        while (this.register.pc < 0x150) {
+//        while (this.register.pc < 0x150) {
             final var op = readImmediateN();
             final var instInfo = parse(op);
             try {
                 execInstruction(instInfo);
             } catch (ExecutionControl.NotImplementedException | IllegalArgumentException e) {
                 e.printStackTrace();
-                break;
+                //break;
             }
             System.out.printf("%-20s %s IME=%b\n", instInfo, this.register.toString(), this.imeFlag);
-        }
+       // }
         return 0;
     }
 
