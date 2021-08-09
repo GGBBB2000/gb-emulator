@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Timer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -17,11 +16,16 @@ public class GameBoy {
     ScheduledExecutorService service;
     Cpu cpu;
     Bus bus;
+    Ppu ppu;
+    VRam vRam;
     Cartridge cartridge;
 
     public GameBoy() {
-        this.bus = new Bus();
+        this.vRam = new VRam();
+        this.ppu = new Ppu();
+        this.bus = new Bus(this.vRam);
         this.cpu = new Cpu(this.bus);
+        this.ppu = new Ppu();
         this.service = Executors.newSingleThreadScheduledExecutor();
     }
 

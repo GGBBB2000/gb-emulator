@@ -3,13 +3,13 @@ package Model;
 class Bus {
     byte[] romBank; // TODO: impl MBC
     byte[] wram;
-    byte[] vram;
+    VRam vram;
     byte[] extVram; // 8KiB
     byte[] attributeTable;
 
-    public Bus() {
+    public Bus(VRam vRam) {
         this.wram = new byte[8 * 1024]; // 8KiB
-        this.vram = new byte[16 * 1024]; // 16KiB
+        this.vram = vRam; // 16KiB
         this.extVram = new byte[8 * 1024]; // 16KiB
         this.attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
     }
@@ -18,61 +18,65 @@ class Bus {
         this.romBank = romBank;
     }
 
-    public void write(final int addr, final Byte data) {
-        if (addr < 0x4000) {         // ROM bank 0
-            romBank[addr] = data;
-        } else if (addr < 0x8000) {  // ROM bank 01~NN
-            romBank[addr - 0x4000] = data;
-        } else if (addr < 0xA000) {  // VRAM
-            vram[addr - 0x8000] = data;
-        } else if (addr < 0xC000) {  // External RAM
-            extVram[addr - 0xA000] = data;
-        } else if (addr < 0xD000) {  // WRAM
-            wram[addr - 0xC000] = data;
-        } else if (addr < 0xE000) {  // WRAM
-            wram[addr - 0xC000] = data;
-        } else if (addr < 0xFE00) {  // ECHO RAM
+    public void write(final int address, final byte data) {
+        if (address < 0x4000) {         // ROM bank 0
+            romBank[address] = data;
+        } else if (address < 0x8000) {  // ROM bank 01~NN
+            romBank[address - 0x4000] = data;
+        } else if (address < 0xA000) {  // VRAM
+            this.vram.write(address - 0x8000, data);
+        } else if (address < 0xC000) {  // External RAM
+            extVram[address - 0xA000] = data;
+        } else if (address < 0xD000) {  // WRAM
+            wram[address - 0xC000] = data;
+        } else if (address < 0xE000) {  // WRAM
+            wram[address - 0xC000] = data;
+        } else if (address < 0xFE00) {  // ECHO RAM
             // prohibited
-        } else if (addr < 0xFEA0) {  // Sprite attribute table(OAM)
-            attributeTable[addr] = data;
-        } else if (addr < 0xFF00) {  // Not Usable
+        } else if (address < 0xFEA0) {  // Sprite attribute table(OAM)
+            attributeTable[address - 0xFE00] = data;
+        } else if (address < 0xFF00) {  // Not Usable
             // do nothing
-        } else if (addr < 0xFF80) {  // I/O Registers
+        } else if (address < 0xFF80) {  // I/O Registers
 
-        } else if (addr < 0xFFFF) {  // High RAM (HRAM)
+        } else if (address < 0xFFFF) {  // High RAM (HRAM)
             // ?
-        } else if (addr == 0xFFFF) { // Interrupt Enable register
+        } else if (address == 0xFFFF) { // Interrupt Enable register
 
         }
     }
 
-    public Byte read(int addr) {
-        Byte returnVal = 0;
-        if (addr < 0x4000) {         // ROM bank 00
-            returnVal = romBank[addr];
-        } else if (addr < 0x8000) {  // ROM bank 01~NN
-            returnVal = romBank[addr - 0x4000];
-        } else if (addr < 0xA000) {  // VRAM
-            returnVal = vram[addr - 0x8000];
-        } else if (addr < 0xC000) {  // External RAM
-            returnVal = extVram[addr - 0xA000];
-        } else if (addr < 0xD000) {  // WRAM
-            returnVal = wram[addr - 0xC000];
-        } else if (addr < 0xE000) {  // WRAM
-            returnVal = wram[addr - 0xC000];
-        } else if (addr < 0xFE00) {  // ECHO RAM
-            returnVal = wram[addr - 0x2000 - 0xC000];
-        } else if (addr < 0xFEA0) {  // Sprite attribute table(OAM)
-            returnVal = attributeTable[addr - 0xFE00];
-        } else if (addr < 0xFF00) {  // Not Usable
+    public byte read(final int address) {
+        byte returnVal = 0;
+        if (address < 0x4000) {         // ROM bank 00
+            returnVal = romBank[address];
+        } else if (address < 0x8000) {  // ROM bank 01~NN
+            returnVal = romBank[address - 0x4000];
+        } else if (address < 0xA000) {  // VRAM
+            returnVal = this.vram.read(address - 0x8000);
+        } else if (address < 0xC000) {  // External RAM
+            returnVal = extVram[address - 0xA000];
+        } else if (address < 0xD000) {  // WRAM
+            returnVal = wram[address - 0xC000];
+        } else if (address < 0xE000) {  // WRAM
+            returnVal = wram[address - 0xC000];
+        } else if (address < 0xFE00) {  // ECHO RAM
+            returnVal = wram[address - 0x2000 - 0xC000];
+        } else if (address < 0xFEA0) {  // Sprite attribute table(OAM)
+            returnVal = attributeTable[address - 0xFE00];
+        } else if (address < 0xFF00) {  // Not Usable
             // do nothing
-        } else if (addr < 0xFF80) {  // I/O Registers
+        } else if (address < 0xFF80) {  // I/O Registers
 
-        } else if (addr < 0xFFFF) {  // High RAM (HRAM)
+        } else if (address < 0xFFFF) {  // High RAM (HRAM)
 
-        } else if (addr == 0xFFFF) { // Interrupt Enable register
+        } else if (address == 0xFFFF) { // Interrupt Enable register
 
         }
         return returnVal;
+    }
+
+    public byte[] getAttributeTable() {
+        return attributeTable;
     }
 }

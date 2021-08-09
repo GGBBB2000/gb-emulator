@@ -5,7 +5,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BusTest {
-    final Bus bus = new Bus();
+    final VRam vRam = new VRam();
+    final Bus bus = new Bus(vRam);
 
     @Test
     void vramIOTest() {
