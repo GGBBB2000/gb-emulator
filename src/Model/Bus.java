@@ -1,7 +1,7 @@
 package Model;
 
 class Bus {
-    byte[] romBank; // TODO: impl MBC
+    Cartridge cartridge;
     final WRam wram;
     final VRam vram;
     final byte[] extVram; // 8KiB
@@ -14,15 +14,15 @@ class Bus {
         this.attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
     }
 
-    public void mapRom(final byte[] romBank) {
-        this.romBank = romBank;
+    public void connectCartridge(final Cartridge cartridge) {
+        this.cartridge = cartridge;
     }
 
     public void write(final int address, final byte data) {
         if (address < 0x4000) {         // ROM bank 0
-            romBank[address] = data;
+            //cartridge[address] = data;
         } else if (address < 0x8000) {  // ROM bank 01~NN
-            romBank[address - 0x4000] = data;
+            //cartridge[address - 0x4000] = data;
         } else if (address < 0xA000) {  // VRAM
             this.vram.write(address - 0x8000, data);
         } else if (address < 0xC000) {  // External RAM
@@ -49,9 +49,9 @@ class Bus {
     public byte read(final int address) {
         byte returnVal = 0;
         if (address < 0x4000) {         // ROM bank 00
-            returnVal = romBank[address];
+            returnVal = this.cartridge.read(address);
         } else if (address < 0x8000) {  // ROM bank 01~NN
-            returnVal = romBank[address - 0x4000];
+            returnVal = this.cartridge.read(address - 0x4000);
         } else if (address < 0xA000) {  // VRAM
             returnVal = this.vram.read(address - 0x8000);
         } else if (address < 0xC000) {  // External RAM

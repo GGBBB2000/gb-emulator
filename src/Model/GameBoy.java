@@ -75,7 +75,7 @@ public class GameBoy {
             pcs.firePropertyChange("loadFailed", false, true);
         }
         cart.rom = tmpRom;
-        this.bus.mapRom(cart.rom);
+        this.bus.connectCartridge(cart);
         this.cartridge = cart;
         pcs.firePropertyChange("success", false, true);
     }
