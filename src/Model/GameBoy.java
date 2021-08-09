@@ -18,12 +18,14 @@ public class GameBoy {
     Bus bus;
     Ppu ppu;
     VRam vRam;
+    WRam wRam;
     Cartridge cartridge;
 
     public GameBoy() {
         this.vRam = new VRam();
+        this.wRam = new WRam();
         this.ppu = new Ppu();
-        this.bus = new Bus(this.vRam);
+        this.bus = new Bus(this.vRam, this.wRam);
         this.cpu = new Cpu(this.bus);
         this.ppu = new Ppu();
         this.service = Executors.newSingleThreadScheduledExecutor();

@@ -2,14 +2,14 @@ package Model;
 
 class Bus {
     byte[] romBank; // TODO: impl MBC
-    byte[] wram;
-    VRam vram;
-    byte[] extVram; // 8KiB
-    byte[] attributeTable;
+    final WRam wram;
+    final VRam vram;
+    final byte[] extVram; // 8KiB
+    final byte[] attributeTable;
 
-    public Bus(VRam vRam) {
-        this.wram = new byte[8 * 1024]; // 8KiB
-        this.vram = vRam; // 16KiB
+    public Bus(VRam vRam, WRam wRam) {
+        this.wram = wRam;
+        this.vram = vRam;
         this.extVram = new byte[8 * 1024]; // 16KiB
         this.attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
     }
@@ -28,9 +28,9 @@ class Bus {
         } else if (address < 0xC000) {  // External RAM
             extVram[address - 0xA000] = data;
         } else if (address < 0xD000) {  // WRAM
-            wram[address - 0xC000] = data;
+            this.wram.write(address - 0xC000, data);
         } else if (address < 0xE000) {  // WRAM
-            wram[address - 0xC000] = data;
+            this.wram.write(address - 0xC000, data);
         } else if (address < 0xFE00) {  // ECHO RAM
             // prohibited
         } else if (address < 0xFEA0) {  // Sprite attribute table(OAM)
@@ -57,11 +57,11 @@ class Bus {
         } else if (address < 0xC000) {  // External RAM
             returnVal = extVram[address - 0xA000];
         } else if (address < 0xD000) {  // WRAM
-            returnVal = wram[address - 0xC000];
+            returnVal = this.wram.read(address - 0xC000);
         } else if (address < 0xE000) {  // WRAM
-            returnVal = wram[address - 0xC000];
+            returnVal = this.wram.read(address - 0xC000);
         } else if (address < 0xFE00) {  // ECHO RAM
-            returnVal = wram[address - 0x2000 - 0xC000];
+            returnVal = this.wram.read(address - 0x2000 - 0xC000);
         } else if (address < 0xFEA0) {  // Sprite attribute table(OAM)
             returnVal = attributeTable[address - 0xFE00];
         } else if (address < 0xFF00) {  // Not Usable
