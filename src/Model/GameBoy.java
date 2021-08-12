@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class GameBoy {
-    PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+    PropertyChangeSupport pcs;
     ScheduledExecutorService service;
     Cpu cpu;
     Bus bus;
@@ -20,19 +20,31 @@ public class GameBoy {
     VRam vRam;
     WRam wRam;
     Cartridge cartridge;
+    Lcd lcd;
 
     public GameBoy() {
+        this.lcd = new Lcd(160, 144);
         this.vRam = new VRam();
         this.wRam = new WRam();
-        this.ppu = new Ppu();
         this.bus = new Bus(this.vRam, this.wRam);
         this.cpu = new Cpu(this.bus);
-        this.ppu = new Ppu();
+        this.ppu = new Ppu(vRam, this.lcd);
         this.service = Executors.newSingleThreadScheduledExecutor();
+        this.pcs = new PropertyChangeSupport(this);
     }
 
     public ScheduledExecutorService getService() {
         return service;
+    }
+
+    public byte[] getLcd() { return this.lcd.getData(); }
+
+    public void addLcdListener(PropertyChangeListener propertyChangeListener) {
+        this.lcd.addPropertyChangeListener(propertyChangeListener);
+    }
+
+    public void removeLcdListener(PropertyChangeListener propertyChangeListener) {
+        this.lcd.removePropertyChangeListener(propertyChangeListener);
     }
 
     public void addPropertyChangeListener(PropertyChangeListener propertyChangeListener) {
@@ -86,7 +98,17 @@ public class GameBoy {
         }
     }
 
+    int count = 0;
     public void run() {
-        cpu.stepByInst();
+        int cycleSum = 0;
+        while (cycleSum < 70224) {
+            final int cycle = cpu.stepByInst();
+            ppu.run(cycle);
+            cycleSum += cycle;
+        }
+        if (count++ % 59 == 0) {
+            System.out.println(count / 60);
+        }
+        count %= 600;
     }
 }

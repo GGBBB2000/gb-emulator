@@ -7,19 +7,18 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 
 class LcdController implements PropertyChangeListener {
+    final MainGameView view;
+    final GameBoy model;
+
     public LcdController(MainGameView view, GameBoy model) {
+        this.view = view;
+        this.model = model;
     }
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-
+        final var lcdData = model.getLcd();
+        final var screen = view.getLcd();
+        screen.setLcdData(lcdData);
     }
-
-    /*@Override
-    public void propertyChange(PropertyChangeEvent evt) {
-        // final var data = model.getLcd();
-        ////this.imageBuffer.setData(Raster.createRaster(this.imageBuffer.getSampleModel(), new DataBufferByte(out, out.length), new Point()));
-        repaint();
-    }*/
-
 }

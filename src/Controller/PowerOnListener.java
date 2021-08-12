@@ -20,7 +20,7 @@ class PowerOnListener implements ActionListener {
         final var service = this.model.getService();
         service.scheduleAtFixedRate(() -> {
             this.model.powerOn();
-        }, 0, 500,TimeUnit.MILLISECONDS);
+        }, 0, 17,TimeUnit.MILLISECONDS);
         this.view.getJMenuBar().getMenu(1).getItem(0).setEnabled(false);
     }
 }

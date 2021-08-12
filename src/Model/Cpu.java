@@ -79,7 +79,7 @@ class Cpu {
             case DE -> this.read(this.register.de);
             case HL -> this.read(this.register.hl);
             case N -> (byte) param.getImmediateVal(); //　怪しい
-            case NN, INDEXED_N-> this.read(param.getImmediateVal());
+            case NN, INDEXED_N -> this.read(param.getImmediateVal());
             case CC_C -> (this.register.getHC()) ? (byte) 0 : (byte) param.getImmediateVal(); // read as singed value!
             case CC_NC -> !(this.register.getHC()) ? (byte) 0 : (byte) param.getImmediateVal();
             case CC_Z -> (this.register.getZ()) ? (byte) 0 : (byte) param.getImmediateVal();
@@ -124,18 +124,16 @@ class Cpu {
     }
 
     public int stepByInst() {
-//        while (this.register.pc < 0x150) {
-            final var op = readImmediateN();
-            final var instInfo = parse(op);
-            try {
-                execInstruction(instInfo);
-            } catch (ExecutionControl.NotImplementedException | IllegalArgumentException e) {
-                e.printStackTrace();
-                //break;
-            }
-            System.out.printf("%-20s %s IME=%b\n", instInfo, this.register.toString(), this.imeFlag);
-       // }
-        return 0;
+
+        final var op = readImmediateN();
+        final var instInfo = parse(op);
+        try {
+            execInstruction(instInfo);
+        } catch (ExecutionControl.NotImplementedException | IllegalArgumentException e) {
+            e.printStackTrace();
+        }
+        //System.out.printf("%-20s %s IME=%b\n", instInfo, this.register.toString(), this.imeFlag);
+        return instInfo.cycle();
     }
 
     private InstructionInfo parse(byte opcode) {

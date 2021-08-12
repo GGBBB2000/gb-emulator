@@ -28,50 +28,121 @@ class Ppu {
                              // 0xFF68 BCPS/BGPI (Background Color Palette Specification or Background Palette Index)
                              // 0xFF69 BCPS/BGPI (Background Color Palette Data or Background Palette Data)
 
-    public Ppu() {
-        lcdControlRegister = (byte)0b1000_0000;
-        lcdStatusRegister = (byte)0b1000_0000;
-        scy = 0;
-        scx = 0;
-        ly = 0;
-        lyc = 0;
-        bgp = 0;
-        obp0 = 0;
-        obp1 = 0;
-        wy = 0;
-        wx = 0;
+    PPU_MODE mode;
+    VRam vRam;
+    Lcd lcd;
+
+    int cycleSum;
+    int lines;
+
+    enum PPU_MODE {
+        OAM_SCAN, // MODE2
+        DRAWING, // MODE3
+        H_BLANK, // MODE0
+        V_BLANK; // MODE1
+    }
+
+    private record Pixcel(byte color, int palette, int priority, int bgPriority) {}
+
+    private class BGPixelFetcher {
+        final Ppu ppu;
+        FetchMode mode;
+        int tilePositionCounter;
+        int tileNum;
+        byte tileData;
+        int x;
+        int y;
+
+        enum FetchMode {
+            GET_TILE,
+            GET_DATA_LOW,
+            GET_DATA_HIGH,
+            SLEEP,
+            PUSH,
+        }
+
+        private BGPixelFetcher(Ppu ppu) {
+            this.ppu = ppu;
+            this.mode = FetchMode.GET_TILE;
+            this.tilePositionCounter = 0;
+            this.x = 0;
+            this.y = 0;
+            this.tileNum = 0;
+        }
+
+        public void step() {
+            switch (this.mode) {
+                case GET_TILE -> this.getTile();
+                case GET_DATA_LOW -> this.getTileLow();
+                case GET_DATA_HIGH -> this.getTileHigh();
+                case PUSH -> this.pushPixelToFIFO();
+                case SLEEP -> {}
+            }
+        }
+
+        private void getTile() {
+            this.mode = FetchMode.GET_DATA_LOW;
+        }
+
+        private void getTileLow() {
+            this.mode = FetchMode.GET_DATA_HIGH;
+        }
+
+        private void getTileHigh() {
+            this.mode = FetchMode.GET_DATA_HIGH;
+        }
+
+        private void pushPixelToFIFO() {
+            this.mode = FetchMode.SLEEP;
+        }
+    }
+
+    public Ppu(VRam vRam, Lcd lcd) {
+        this.vRam = vRam;
+        this.lcd = lcd;
+        this.mode = PPU_MODE.OAM_SCAN;
+        this.lcdControlRegister = (byte)0b1000_0000;
+        this.lcdStatusRegister = (byte)0b1000_0000;
+        this.scy = 0;
+        this.scx = 0;
+        this.ly = 0;
+        this.lyc = 0;
+        this.bgp = 0;
+        this.obp0 = 0;
+        this.obp1 = 0;
+        this.wy = 0;
+        this.wx = 0;
+        this.cycleSum = 0;
+        this.lines = 0;
     }
 
     public void run(int cycle) {
+        this.cycleSum += cycle;
+        while (cycle > 0) {
+            switch (this.mode) {
+                case OAM_SCAN -> { // OAM_SCAN takes 80 T-cycles for 40 sprites
+                    cycle -= 2;
+                    // TODO: read OAM
+                    if (this.cycleSum % 456 >= 80) {
+                        this.mode = PPU_MODE.DRAWING;
+                    }
+                }
+                case DRAWING -> { // DRAWING takes 172~289 T-cycles
 
+                }
+                case H_BLANK -> {
+
+                }
+            }
+        }
+        this.lines = this.cycleSum / 456;
+        //System.out.printf("PPU: MODE:%s cycle: %d line: %d\n", mode.toString(), this.cycle, this.line);
     }
 
     public void read() {
     }
 
     public void write() {
-
-    }
-
-    enum FetchMode {
-        WINDOW,
-        BACKGROUND,
-        OBJECT,
-    }
-
-    enum PPU_MODE {
-        OAM_SCAN, // MODE2
-        DRAWING, // MODE3
-        H_BLANK, // MODE0
-        V_BLANK, // MODE1
-    };
-
-    private class BackgroundPixelFetcher {
-        int windowLineCounter;
-        int xPositionCounter;
-    }
-
-    private class ObjectPixelFetcher {
 
     }
 }
