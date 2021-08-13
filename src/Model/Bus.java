@@ -4,12 +4,14 @@ class Bus {
     Cartridge cartridge;
     final WRam wram;
     final VRam vram;
+    final Ppu ppu;
     final byte[] extVram; // 8KiB
     final byte[] attributeTable;
 
-    public Bus(VRam vRam, WRam wRam) {
+    public Bus(VRam vRam, WRam wRam, Ppu ppu) {
         this.wram = wRam;
         this.vram = vRam;
+        this.ppu = ppu;
         this.extVram = new byte[8 * 1024]; // 16KiB
         this.attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
     }
@@ -38,7 +40,9 @@ class Bus {
         } else if (address < 0xFF00) {  // Not Usable
             // do nothing
         } else if (address < 0xFF80) {  // I/O Registers
-
+            if (0xFF40 <= address && address <= 0xFF4A) {
+                this.ppu.write(address, data);
+            }
         } else if (address < 0xFFFF) {  // High RAM (HRAM)
             // ?
         } else if (address == 0xFFFF) { // Interrupt Enable register
@@ -67,7 +71,9 @@ class Bus {
         } else if (address < 0xFF00) {  // Not Usable
             // do nothing
         } else if (address < 0xFF80) {  // I/O Registers
-
+            if (0xFF40 <= address && address <= 0xFF4A) {
+                returnVal = this.ppu.read(address);
+            }
         } else if (address < 0xFFFF) {  // High RAM (HRAM)
 
         } else if (address == 0xFFFF) { // Interrupt Enable register

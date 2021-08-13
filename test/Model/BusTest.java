@@ -7,7 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class BusTest {
     final VRam vRam = new VRam();
     final WRam wRam = new WRam();
-    final Bus bus = new Bus(vRam, wRam);
+    final Ppu ppu = new Ppu(new VRam(), new Lcd(0, 0));
+    final Bus bus = new Bus(vRam, wRam, ppu);
 
     @Test
     void vramIOTest() {

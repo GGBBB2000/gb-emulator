@@ -2,7 +2,7 @@ package Model;
 
 class VRam {
     private final byte[][] ram;
-    private int bank;
+    private final int bank;
 
     public VRam() {
         this.ram = new byte[2][16 * 1024]; // 16KiB * 2
