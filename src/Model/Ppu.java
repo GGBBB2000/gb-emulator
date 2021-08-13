@@ -1,7 +1,6 @@
 package Model;
 
 import java.util.ArrayDeque;
-import java.util.Optional;
 
 class Ppu {
     final LcdControl lcdControl;
@@ -25,7 +24,6 @@ class Ppu {
     Lcd lcd;
 
     int cycleSum;
-    int lines;
 
     enum PPU_MODE {
         OAM_SCAN((byte) 2), // MODE2
@@ -43,8 +41,8 @@ class Ppu {
         this.vRam = vRam;
         this.lcd = lcd;
         this.mode = PPU_MODE.OAM_SCAN;
-        this.pixelFetcher = new PixelFetcher(this);
         this.pixelFIFO = new PixelFIFO(this.lcd);
+        this.pixelFetcher = new PixelFetcher(this.pixelFIFO);
         this.lcdControl = new LcdControl();
         this.lcdStat = new LcdStat();
         this.scy = 0;
@@ -57,7 +55,6 @@ class Ppu {
         this.wy = 0;
         this.wx = 0;
         this.cycleSum = 0;
-        this.lines = 0;
     }
 
     public void run(int cycle) {
@@ -73,7 +70,14 @@ class Ppu {
                     }
                 }
                 case DRAWING -> { // DRAWING takes 43-72 T-cycles
-
+                    cycle -= 2;
+                    this.pixelFetcher.step();
+                    this.pixelFIFO.pushPixelsToLCD();
+                    this.pixelFIFO.pushPixelsToLCD();
+                    if (this.pixelFIFO.getPixelCounter() >= 160) {
+                        this.pixelFIFO.clear();
+                        this.mode = PPU_MODE.H_BLANK;
+                    }
                 }
                 case H_BLANK -> {
                     cycle = lineCycle - ((this.cycleSum % lineCycle) - cycle);
@@ -85,7 +89,6 @@ class Ppu {
                     }
                 }
                 case V_BLANK -> {
-                    this.ly = (byte)(this.cycleSum / lineCycle);
                     if (this.cycleSum >= 1140) {
                         this.cycleSum = 0;
                         this.ly = 0;
@@ -94,7 +97,7 @@ class Ppu {
                 }
             }
         }
-        this.lines = this.cycleSum / 456;
+        this.ly = (byte)(this.cycleSum / lineCycle);
         //System.out.printf("PPU: MODE:%s cycle: %d line: %d\n", mode.toString(), this.cycle, this.line);
     }
 
@@ -259,13 +262,14 @@ class Ppu {
     private record Pixcel(byte color, int palette, int priority, int bgPriority) { }
 
     private class PixelFetcher {
-        final Ppu ppu;
-        FetchMode mode;
-        int tilePositionCounter;
-        int tileNum;
-        byte tileData;
-        int x;
-        int y;
+        private final PixelFIFO fifo;
+        private FetchMode mode;
+        private int tilePositionCounter;
+        private int tileNum;
+        private byte tileData;
+        private int x;
+        private int y;
+        private Pixcel pixcel;
 
         enum FetchMode {
             GET_TILE,
@@ -275,8 +279,8 @@ class Ppu {
             PUSH,
         }
 
-        private PixelFetcher(Ppu ppu) {
-            this.ppu = ppu;
+        private PixelFetcher(PixelFIFO fifo) {
+            this.fifo = fifo;
             this.mode = FetchMode.GET_TILE;
             this.tilePositionCounter = 0;
             this.x = 0;
@@ -310,17 +314,26 @@ class Ppu {
         private void pushPixelToFIFO() {
             this.mode = FetchMode.SLEEP;
         }
+
+        private boolean pixelDataIsReady() {
+            return this.pixcel != null;
+        }
     }
 
     private class PixelFIFO extends ArrayDeque<Pixcel> {
-        final Lcd lcd;
-        int pixelCounter = 0;
-        public PixelFIFO(final Lcd lcd) {
+        private final Lcd lcd;
+        private int pixelCounter = 0;
+
+        private PixelFIFO(final Lcd lcd) {
             super(16); // FIFO has 16 pixel data
             this.lcd = lcd;
         }
 
-        public void pushPixelToLCD() {
+        private int getPixelCounter() {
+            return pixelCounter;
+        }
+
+        private void pushPixelsToLCD() {
             final var pixel = this.poll();
             if (pixel != null) {
                 this.lcd.draw(pixel.color);
@@ -328,7 +341,7 @@ class Ppu {
             }
         }
 
-        public boolean hasEnoughSpace() {
+        private boolean hasEnoughSpace() {
             return this.size() <= 8;
         }
     }
