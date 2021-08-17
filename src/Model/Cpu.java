@@ -277,19 +277,14 @@ class Cpu {
             // case SET -> {}
             // case RES -> {}
             case JP -> {
-                if (instInfo.to() != Params.PC
-                        && (instInfo.to() == Params.CC_C ||
-                        instInfo.to() == Params.CC_Z ||
-                        instInfo.to() == Params.CC_NC ||
-                        instInfo.to() == Params.CC_NZ)) { // conditional jump
-                    final var n = this.get8bitDataByParam(instInfo.from());
-                    this.register.pc += n;
-                } else if (instInfo.to() == Params.PC) {
-                    final int jumpAddr = this.get16bitDataByParam(instInfo.from());
-                    this.set16bitDataByParam(instInfo.to(), jumpAddr);
-                } else {
-                    throw new IllegalArgumentException(String.format("[%s]: Illegal parameter!\n", instInfo.to()));
-                }
+                final var jumpAdder = this.get16bitDataByParam(instInfo.from());
+                this.register.pc = switch (instInfo.to()) {
+                    case CC_C -> (this.register.getFC()) ? jumpAdder : 0;
+                    case CC_NC -> (!this.register.getFC()) ? jumpAdder : 0;
+                    case CC_Z -> (this.register.getZ()) ? jumpAdder : 0;
+                    case CC_NZ -> (!this.register.getZ()) ? jumpAdder : 0;
+                    default -> jumpAdder;
+                };
             }
             case JR -> {
                 final var n = this.get8bitDataByParam(instInfo.from());
