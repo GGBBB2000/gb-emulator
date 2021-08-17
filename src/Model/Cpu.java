@@ -162,10 +162,6 @@ class Cpu {
                 final byte data = this.get8bitDataByParam(instInfo.from());
                 this.set8bitDataByParam(instInfo.to(), data);
             }
-            case WLD -> { // 16bit LD
-                final int data = this.get16bitDataByParam(instInfo.from());
-                this.set16bitDataByParam(instInfo.to(), data);
-            }
             case LDI -> {
                 final byte data = this.get8bitDataByParam(instInfo.from());
                 this.set8bitDataByParam(instInfo.to(), data);
@@ -176,6 +172,88 @@ class Cpu {
                 this.set8bitDataByParam(instInfo.to(), data);
                 this.register.hl--;
             }
+            case WLD -> { // 16bit LD
+                final int data = this.get16bitDataByParam(instInfo.from());
+                this.set16bitDataByParam(instInfo.to(), data);
+            }
+            case PUSH -> {
+                final int data = this.get16bitDataByParam(instInfo.from());
+                this.push1Byte(data);
+            }
+            case POP -> {
+                final int data = this.pop1Byte();
+                this.set16bitDataByParam(instInfo.to(), data);
+            }
+            //case ADD -> { // 8bit ALU
+
+            //}
+            //case ADC -> {
+            //}
+            //case SUB -> {}
+            //case SBC -> {}
+            case AND -> {
+                final byte from = this.get8bitDataByParam(instInfo.from());
+                final byte result = (byte)(this.register.getA() & from);
+                this.set8bitDataByParam(instInfo.to(), result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(false);
+            }
+            case OR -> {
+                final byte from = this.get8bitDataByParam(instInfo.from());
+                final byte result = (byte)(this.register.getA() | from);
+                this.set8bitDataByParam(instInfo.to(), result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(false);
+            }
+            case XOR -> {
+                final byte from = this.get8bitDataByParam(instInfo.from());
+                final byte result = (byte)(this.register.getA() ^ from);
+                this.set8bitDataByParam(instInfo.to(), result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(false);
+            }
+            case CP -> {
+                final byte data = this.get8bitDataByParam(instInfo.from());
+                final var result = this.register.getA() - data;
+                this.register.setZ(result == 0);
+                this.register.setN(true);
+                this.register.setHC((this.register.getA() & 0xF) < (data & 0xF));
+                this.register.setFC(this.register.getA() < data);
+            }
+            // case INC -> {}
+            // case DEC -> {}
+            // case ADD(16bit) -> {} //16bit Arithmetic
+            // case INC(16bit) -> {}
+            // case DEC(16bit) -> {}
+            // case SWAP -> {} // Miscellaneous
+            // case DAA -> {}
+            // case CPL -> {}
+            // case CCF -> {}
+            // case SCF -> {}
+            case NOP -> {}
+            // case STOP -> {}
+            case DI -> this.imeFlag = false; // disable interrupt IME <- false
+            case EI -> this.imeFlag = true; // Interrupts are enabled after instruction after EI is executed
+            // case RLCA -> {}// Rotates & Shifts
+            // case RLA -> {}
+            // case RRCA -> {}
+            // case RRA -> {}
+            // case RLC -> {}
+            // case RL -> {}
+            // case RRC -> {}
+            // case RR -> {}
+            // case SLA -> {}
+            // case SRA -> {}
+            // case SRL -> {}
+            // case BIT -> {} // Bit Opcodes
+            // case SET -> {}
+            // case RES -> {}
             case JP -> {
                 if (instInfo.to() != Params.PC
                         && (instInfo.to() == Params.CC_C ||
@@ -190,29 +268,21 @@ class Cpu {
                 } else {
                     throw new IllegalArgumentException(String.format("[%s]: Illegal parameter!\n", instInfo.to()));
                 }
-
-            }
-            case PUSH -> {
-                final int data = this.get16bitDataByParam(instInfo.from());
-                this.push1Byte(data);
-            }
-            case POP -> {
-                final int data = this.pop1Byte();
-                this.set16bitDataByParam(instInfo.to(), data);
-            }
-            case CP -> {
-                final byte data = this.get8bitDataByParam(instInfo.from());
-                final var result = this.register.getA() - data;
-                this.register.setZ(result == 0);
-                this.register.setN(true);
-                this.register.setHC((this.register.getA() & 0xF) < (data & 0xF));
-                this.register.setFC(this.register.getA() < data);
             }
             case JR -> {
                 final var n = this.get8bitDataByParam(instInfo.from());
-                this.register.pc += n;
+                this.register.pc += switch (instInfo.to()) {
+                    case CC_C -> (this.register.getFC()) ? n : 0;
+                    case CC_NC -> (!this.register.getFC()) ? n : 0;
+                    case CC_Z -> (this.register.getZ()) ? n : 0;
+                    case CC_NZ -> (!this.register.getZ()) ? n : 0;
+                    default -> n;
+                };
             }
-            case DI -> this.imeFlag = false; // disable interrupt IME <- false
+            // case CALL -> {} // Calls
+            // case RST -> {}
+            // RET -> {} // Returns
+            // RETI -> {}
             default -> throw new ExecutionControl.NotImplementedException(String.format("[%s]: not implemented or Illegal instruction!\n", instInfo));
         }
     }
