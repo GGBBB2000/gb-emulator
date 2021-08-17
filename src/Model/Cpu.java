@@ -226,11 +226,33 @@ class Cpu {
                 this.register.setHC((this.register.getA() & 0xF) < (data & 0xF));
                 this.register.setFC(this.register.getA() < data);
             }
-            // case INC -> {}
-            // case DEC -> {}
+            case INC -> {
+                final var data = this.get8bitDataByParam(instInfo.from());
+                final byte result = (byte)(data + 1);
+                this.set8bitDataByParam(instInfo.to(), result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC((((data & 0xF) + 1) & 0x10) == 0);
+            }
+            case DEC -> {
+                final var data = this.get8bitDataByParam(instInfo.from());
+                final byte result = (byte)(data - 1);
+                this.set8bitDataByParam(instInfo.to(), result);
+                this.register.setZ(result == 0);
+                this.register.setN(true);
+                this.register.setHC((data & 0xF) > 1);
+            }
             // case ADD(16bit) -> {} //16bit Arithmetic
-            // case INC(16bit) -> {}
-            // case DEC(16bit) -> {}
+            case WINC -> { // 16bit INC
+                final var data = this.get16bitDataByParam(instInfo.from());
+                final int result = data + 1;
+                this.set16bitDataByParam(instInfo.to(), result);
+            }
+            case WDEC -> {
+                final var data = this.get16bitDataByParam(instInfo.from());
+                final int result = data - 1;
+                this.set16bitDataByParam(instInfo.to(), result);
+            }
             // case SWAP -> {} // Miscellaneous
             // case DAA -> {}
             // case CPL -> {}
