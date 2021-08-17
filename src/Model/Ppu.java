@@ -41,10 +41,10 @@ class Ppu {
         this.vRam = vRam;
         this.lcd = lcd;
         this.mode = PPU_MODE.OAM_SCAN;
-        this.pixelFIFO = new PixelFIFO(this.lcd);
-        this.pixelFetcher = new PixelFetcher(this.pixelFIFO);
         this.lcdControl = new LcdControl();
         this.lcdStat = new LcdStat();
+        this.pixelFIFO = new PixelFIFO(this.lcd);
+        this.pixelFetcher = new PixelFetcher();
         this.scy = 0;
         this.scx = 0;
         this.ly = 0;
@@ -58,14 +58,14 @@ class Ppu {
     }
 
     public void run(int cycle) {
-        final var lineCycle = 114; // sum of cycle to render a line
+        final var lineCycle = 456; // sum of cycle to render a line
         this.cycleSum += cycle;
         while (cycle > 0) {
             switch (this.mode) {
                 case OAM_SCAN -> { // OAM_SCAN takes 20 T-cycles for 40 sprites
                     cycle -= 2;
                     // TODO: read OAM
-                    if ((this.cycleSum % lineCycle) - cycle >= 20) {
+                    if ((this.cycleSum % lineCycle) - cycle >= 80) {
                         this.mode = PPU_MODE.DRAWING;
                     }
                 }
@@ -76,20 +76,26 @@ class Ppu {
                     this.pixelFIFO.pushPixelsToLCD();
                     if (this.pixelFIFO.getPixelCounter() >= 160) {
                         this.pixelFIFO.clear();
+                        this.pixelFIFO.clearCounter();
                         this.mode = PPU_MODE.H_BLANK;
                     }
                 }
                 case H_BLANK -> {
-                    cycle = lineCycle - ((this.cycleSum % lineCycle) - cycle);
-                    if (Byte.toUnsignedInt(this.ly) == 143) {
-                        this.mode = PPU_MODE.V_BLANK;
-                    } else {
+                    final int currentLine = Byte.toUnsignedInt(this.ly);
+                    if (this.cycleSum / lineCycle > currentLine) {
+                        if (currentLine == 143) {
+                            this.mode = PPU_MODE.V_BLANK;
+                        } else {
+                            this.mode = PPU_MODE.OAM_SCAN;
+                        }
                         this.ly++;
-                        this.mode = PPU_MODE.OAM_SCAN;
                     }
+                    cycle = 0;
                 }
                 case V_BLANK -> {
-                    if (this.cycleSum >= 1140) {
+                    cycle = 0;
+                    this.ly = (byte)(this.cycleSum / lineCycle);
+                    if (this.cycleSum >= 70224) {
                         this.cycleSum = 0;
                         this.ly = 0;
                         this.mode = PPU_MODE.OAM_SCAN;
@@ -97,7 +103,6 @@ class Ppu {
                 }
             }
         }
-        this.ly = (byte)(this.cycleSum / lineCycle);
         //System.out.printf("PPU: MODE:%s cycle: %d line: %d\n", mode.toString(), this.cycle, this.line);
     }
 
@@ -262,15 +267,12 @@ class Ppu {
     private record Pixcel(byte color, int palette, int priority, int bgPriority) { }
 
     private class PixelFetcher {
-        private final PixelFIFO fifo;
         private FetchMode mode;
-        private int tilePositionCounter;
         private int tileNum;
-        private byte tileData;
-        private int x;
-        private int y;
-        private Pixcel pixcel;
-
+        private byte tileDataLow;
+        private byte tileDataHigh;
+        private int xPositionCounter;
+        private final int VRAM_BASE_ADDER = 0x8000;
         enum FetchMode {
             GET_TILE,
             GET_DATA_LOW,
@@ -279,12 +281,9 @@ class Ppu {
             PUSH,
         }
 
-        private PixelFetcher(PixelFIFO fifo) {
-            this.fifo = fifo;
+        private PixelFetcher() {
             this.mode = FetchMode.GET_TILE;
-            this.tilePositionCounter = 0;
-            this.x = 0;
-            this.y = 0;
+            this.xPositionCounter = 0;
             this.tileNum = 0;
         }
 
@@ -294,29 +293,60 @@ class Ppu {
                 case GET_DATA_LOW -> this.getTileLow();
                 case GET_DATA_HIGH -> this.getTileHigh();
                 case PUSH -> this.pushPixelToFIFO();
-                case SLEEP -> {
-                }
+                case SLEEP -> {}
             }
         }
 
         private void getTile() {
+            int tileMapBaseAdder = 0x9800;
+            if (Ppu.this.lcdControl.getBGTileMapAreaFlag() /* && current line is not inside window*/) { // BG Tilemap true: 0x9C00~ false: 0x9800~
+                tileMapBaseAdder = 0x9C00;
+            }
+            // only for rendering bg
+            final int scx = Byte.toUnsignedInt(Ppu.this.scx);
+            final int scy = Byte.toUnsignedInt(Ppu.this.scy);
+            final int xIndex = ((scx) / 8 + this.xPositionCounter) & 0x1F; // this.x should be 0 ~ 31
+            final int yIndex = ((scy + Ppu.this.ly) & 0xFF) / 8;
+            final int tileIndex = 32 * yIndex + xIndex;
+            final int tileAdder = tileMapBaseAdder + tileIndex - this.VRAM_BASE_ADDER;
+            this.xPositionCounter++;
+            this.tileNum = Ppu.this.vRam.read(tileAdder);
             this.mode = FetchMode.GET_DATA_LOW;
         }
 
         private void getTileLow() {
+            // BG and Window data area LCDC.4: 0=8800-97FF 1=8000-8FFF
+            final int ly = Ppu.this.ly;
+            final int scy = Ppu.this.scy;
+            final int BASE_ADDER = 0x8800;
+            final int offset = this.tileNum + 2 * ((ly + scy) % 8);
+            final int adder = BASE_ADDER + offset;
+            this.tileDataLow = Ppu.this.vRam.read(adder - this.VRAM_BASE_ADDER);
             this.mode = FetchMode.GET_DATA_HIGH;
         }
 
         private void getTileHigh() {
-            this.mode = FetchMode.GET_DATA_HIGH;
+            final int ly = Ppu.this.ly;
+            final int scy = Ppu.this.scy;
+            final int BASE_ADDER = 0x8800;
+            final int offset = this.tileNum + 2 * ((ly + scy) % 8);
+            final int adder = BASE_ADDER + offset + 1;
+            this.tileDataHigh = Ppu.this.vRam.read(adder - this.VRAM_BASE_ADDER);
+            this.mode = FetchMode.PUSH;
         }
 
         private void pushPixelToFIFO() {
-            this.mode = FetchMode.SLEEP;
-        }
-
-        private boolean pixelDataIsReady() {
-            return this.pixcel != null;
+            final var fifo = Ppu.this.pixelFIFO;
+            if (fifo.hasEnoughSpace()) {
+                for (int i = 7; i >= 0; i--) {
+                    final int lowBit = (this.tileDataLow >>> i) & 1;
+                    final int highBit = (this.tileDataHigh >>> (i - 1)) & 0b10;
+                    final byte pixelData = (byte)(highBit + lowBit);
+                    final Pixcel pixcel = new Pixcel(pixelData, 0, 0, 0);
+                    fifo.offerLast(pixcel);
+                }
+                this.mode = FetchMode.GET_TILE;
+            }
         }
     }
 
@@ -343,6 +373,10 @@ class Ppu {
 
         private boolean hasEnoughSpace() {
             return this.size() <= 8;
+        }
+
+        private void clearCounter () {
+            this.pixelCounter = 0;
         }
     }
 }
