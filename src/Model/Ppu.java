@@ -114,11 +114,12 @@ class Ppu {
             case 0xFF43 -> this.scx;
             case 0xFF44 -> this.ly;
             case 0xFF45 -> this.lyc;
-            case 0xFF46 -> this.bgp;
-            case 0xFF47 -> this.obp0;
-            case 0xFF48 -> this.obp1;
-            case 0xFF49 -> this.wy;
-            case 0xFF4A -> this.wx;
+            case 0xFF46 -> (byte)0; // DMA
+            case 0xFF47 -> this.bgp;
+            case 0xFF48 -> this.obp0;
+            case 0xFF49 -> this.obp1;
+            case 0xFF4A -> this.wy;
+            case 0xFF4B -> this.wx;
             default -> throw new IllegalArgumentException("");
         };
     }
@@ -131,11 +132,12 @@ class Ppu {
             case 0xFF43 -> this.scx = data;
             case 0xFF44 -> this.ly = data;
             case 0xFF45 -> this.lyc = data;
-            case 0xFF46 -> this.bgp = data;
-            case 0xFF47 -> this.obp0 = data;
-            case 0xFF48 -> this.obp1 = data;
-            case 0xFF49 -> this.wy = data;
-            case 0xFF4A -> this.wx = data;
+            case 0xFF46 -> {} // DMA
+            case 0xFF47 -> this.bgp = data;
+            case 0xFF48 -> this.obp0 = data;
+            case 0xFF49 -> this.obp1 = data;
+            case 0xFF4A -> this.wy = data;
+            case 0xFF4B -> this.wx = data;
             default -> throw new IllegalArgumentException("");
         }
     }
