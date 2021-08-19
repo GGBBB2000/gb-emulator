@@ -76,7 +76,7 @@ class Ppu {
                     this.pixelFIFO.pushPixelsToLCD();
                     if (this.pixelFIFO.getPixelCounter() >= 160) {
                         this.pixelFIFO.clear();
-                        this.pixelFIFO.clearCounter();
+                        this.pixelFetcher.reset();
                         this.mode = PPU_MODE.H_BLANK;
                     }
                 }
@@ -284,6 +284,10 @@ class Ppu {
         }
 
         private PixelFetcher() {
+            this.reset();
+        }
+
+        private void reset() {
             this.mode = FetchMode.GET_TILE;
             this.xPositionCounter = 0;
             this.tileNum = 0;
@@ -377,7 +381,9 @@ class Ppu {
             return this.size() <= 8;
         }
 
-        private void clearCounter () {
+        @Override
+        public void clear() {
+            super.clear();
             this.pixelCounter = 0;
         }
     }
