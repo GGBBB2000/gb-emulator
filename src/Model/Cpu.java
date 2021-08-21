@@ -58,6 +58,7 @@ class Cpu {
             case DE -> this.write(this.register.de, data); // LD (DE), n
             case HL -> this.write(this.register.hl, data);
             case NN -> this.write(param.getImmediateVal(), data); // LD (nn), n
+            case INDEXED_N -> this.write(param.getImmediateVal(), data);
             case SP -> {
                 this.write(this.register.sp, data);
                 this.register.pc++;
