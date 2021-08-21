@@ -58,7 +58,7 @@ class Ppu {
     }
 
     public void run(int cycle) {
-        if (this.lcdControl.isLCDEnable()) {
+        if (!this.lcdControl.isLCDEnable()) {
             this.cycleSum = 0;
             this.mode = PPU_MODE.OAM_SCAN;
             this.ly = 0;
@@ -319,8 +319,9 @@ class Ppu {
             // only for rendering bg
             final int scx = Byte.toUnsignedInt(Ppu.this.scx);
             final int scy = Byte.toUnsignedInt(Ppu.this.scy);
+            final int ly = Byte.toUnsignedInt(Ppu.this.ly);
             final int xIndex = ((scx) / 8 + this.xPositionCounter) & 0x1F; // this.x should be 0 ~ 31
-            final int yIndex = ((scy + Ppu.this.ly) & 0xFF) / 8;
+            final int yIndex = ((scy + ly) & 0xFF) / 8;
             final int tileIndex = 32 * yIndex + xIndex;
             final int tileAdder = tileMapBaseAdder + tileIndex - this.VRAM_BASE_ADDER;
             this.xPositionCounter++;
@@ -330,22 +331,22 @@ class Ppu {
 
         private void getTileLow() {
             // BG and Window data area LCDC.4: 0=8800-97FF 1=8000-8FFF
-            final int ly = Ppu.this.ly;
-            final int scy = Ppu.this.scy;
-            final int BASE_ADDER = 0x8800;
-            final int offset = this.tileNum + 2 * ((ly + scy) % 8);
-            final int adder = BASE_ADDER + offset;
-            this.tileDataLow = Ppu.this.vRam.read(adder - this.VRAM_BASE_ADDER);
+            final int ly = Byte.toUnsignedInt(Ppu.this.ly);
+            final int scy = Byte.toUnsignedInt(Ppu.this.scy);
+            final int BASE_ADDER = 0x9000; // if LCDC.4 is 0, base adder will be 9000. otherwise 8000 TODO impl changing base ptr
+            final int offset = this.tileNum * 16 + (2 * ((ly + scy) % 8));
+            final int address = BASE_ADDER + offset;
+            this.tileDataLow = Ppu.this.vRam.read(address - this.VRAM_BASE_ADDER);
             this.mode = FetchMode.GET_DATA_HIGH;
         }
 
         private void getTileHigh() {
             final int ly = Ppu.this.ly;
             final int scy = Ppu.this.scy;
-            final int BASE_ADDER = 0x8800;
-            final int offset = this.tileNum + 2 * ((ly + scy) % 8);
-            final int adder = BASE_ADDER + offset + 1;
-            this.tileDataHigh = Ppu.this.vRam.read(adder - this.VRAM_BASE_ADDER);
+            final int BASE_ADDER = 0x9000;
+            final int offset = this.tileNum * 16 + (2 * ((ly + scy) % 8));
+            final int address = BASE_ADDER + offset + 1;
+            this.tileDataHigh = Ppu.this.vRam.read(address - this.VRAM_BASE_ADDER);
             this.mode = FetchMode.PUSH;
         }
 
@@ -355,12 +356,20 @@ class Ppu {
                 for (int i = 7; i >= 0; i--) {
                     final int lowBit = (this.tileDataLow >>> i) & 1;
                     final int highBit = (this.tileDataHigh >>> (i - 1)) & 0b10;
-                    final byte pixelData = (byte)(highBit + lowBit);
+                    final byte colorIndex = (byte)(highBit + lowBit);
+                    final byte pixelData = this.mapColorIndexToColor(colorIndex);
                     final Pixcel pixcel = new Pixcel(pixelData, 0, 0, 0);
                     fifo.offerLast(pixcel);
                 }
                 this.mode = FetchMode.GET_TILE;
             }
+        }
+
+        private byte mapColorIndexToColor(byte index) {
+            final byte[] colorArray = {(byte)255, (byte)200, (byte)100, 0};
+            final int palette = Byte.toUnsignedInt(Ppu.this.bgp);
+            final int paletteIndex =  ((palette >> 2 * index) & 0b0011);
+            return colorArray[paletteIndex];
         }
     }
 

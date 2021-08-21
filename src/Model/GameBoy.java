@@ -26,7 +26,7 @@ public class GameBoy {
         this.lcd = new Lcd(160, 144);
         this.vRam = new VRam();
         this.wRam = new WRam();
-        this.ppu = new Ppu(vRam, this.lcd);
+        this.ppu = new Ppu(this.vRam, this.lcd);
         this.bus = new Bus(this.vRam, this.wRam, this.ppu);
         this.cpu = new Cpu(this.bus);
         this.service = Executors.newSingleThreadScheduledExecutor();

@@ -28,8 +28,8 @@ class Cpu {
     }
 
     private int readImmediateAddr() {
-        final byte lowerByte = readImmediateN();
-        final byte upperByte = readImmediateN();
+        final int lowerByte = Byte.toUnsignedInt(readImmediateN());
+        final int upperByte = Byte.toUnsignedInt(readImmediateN());
         return (upperByte << 8) | lowerByte;
     }
 

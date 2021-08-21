@@ -621,7 +621,7 @@ record InstructionInfo(int op, Instruction instruction, Params to, Params from,
         final var to = switch (this.to) {
             case AF, BC, DE, HL, NN, SP -> "(" + this.to + ")";
             case INDEXED_C -> "($0xFF00 + C)";
-            case INDEXED_N -> String.format("0x%04X", this.from.getImmediateVal());
+            case INDEXED_N -> String.format("0x%04X", this.to.getImmediateVal());
             case NONE ->  "";
             default -> this.to;
         };
