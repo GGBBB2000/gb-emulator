@@ -58,6 +58,14 @@ class Ppu {
     }
 
     public void run(int cycle) {
+        if (this.lcdControl.isLCDEnable()) {
+            this.cycleSum = 0;
+            this.mode = PPU_MODE.OAM_SCAN;
+            this.ly = 0;
+            this.lyc = 0;
+            this.lcd.reset();
+            return;
+        }
         final var lineCycle = 456; // sum of cycle to render a line
         this.cycleSum += cycle;
         while (cycle > 0) {
