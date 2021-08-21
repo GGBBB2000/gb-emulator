@@ -89,16 +89,20 @@ class Register {
     public void setZ(boolean isZero) {
         if (isZero) {
             this.af |= 0b1000_0000;
+        } else {
+            this.af &= 0b1111_1111_0111_1111;
         }
     }
 
-    public byte getN() {
-        return (byte)((this.af & 0b0100_0000) >> 6);
+    public boolean getN() {
+        return ((this.af & 0b0100_0000) >> 6) == 1;
     }
 
     public void setN(boolean isNegative) {
         if (isNegative) {
             this.af |= 0b0100_0000;
+        } else {
+            this.af &= 0b1111_1111_1011_1111;
         }
     }
 
@@ -109,6 +113,8 @@ class Register {
     public void setHC(boolean hasHalfCarry) {
         if (hasHalfCarry) {
             this.af |= 0b0010_0000;
+        } else {
+            this.af &= 0b1111_1111_1101_1111;
         }
     }
 
@@ -119,6 +125,8 @@ class Register {
     public void setFC(boolean hasFullCarry) {
         if (hasFullCarry) {
             this.af |= 0b0001_0000;
+        } else {
+            this.af &= 0b1111_1111_1110_1111;
         }
     }
 
