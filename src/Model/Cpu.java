@@ -219,12 +219,14 @@ class Cpu {
                 this.register.setFC(false);
             }
             case CP -> {
-                final byte data = this.get8bitDataByParam(instInfo.from());
-                final var result = this.register.getA() - data;
+                // compare "from"  and "to"(A register) as Unsigned value. execute to - from but not write result to "A" register
+                final int from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
+                final int to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to())); // argument must be "A" register
+                final var result = to - from;
                 this.register.setZ(result == 0);
                 this.register.setN(true);
-                this.register.setHC((this.register.getA() & 0xF) < (data & 0xF));
-                this.register.setFC(this.register.getA() < data);
+                this.register.setHC((to & 0xF) < (from & 0xF));
+                this.register.setFC(to < from);
             }
             case INC -> {
                 final var data = this.get8bitDataByParam(instInfo.from());
