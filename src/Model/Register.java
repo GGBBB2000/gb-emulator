@@ -23,7 +23,7 @@ class Register {
     public void setA(byte data) {
         final var upper = data << 8;
         final var lower = this.af & 0xFF;
-        this.af = upper | lower;
+        this.af = (upper | lower) & 0xFFFF;
     }
 
     public byte getB() {
@@ -33,7 +33,7 @@ class Register {
     public void setB(byte data) {
         final var upper = data << 8;
         final var lower = this.bc & 0xFF;
-        this.bc = upper | lower;
+        this.bc = (upper | lower) & 0xFFFF;
     }
 
     public byte getC() {
@@ -52,7 +52,8 @@ class Register {
     public void setD(byte data) {
         final var upper = data << 8;
         final var lower = this.de & 0xFF;
-        this.de = upper | lower;    }
+        this.de = (upper | lower) & 0xFFFF;
+    }
 
     public byte getE() {
         return (byte) (de & 0xFF);
@@ -60,7 +61,7 @@ class Register {
 
     public void setE(byte data) {
         final var upper = this.de & 0xFF00;
-        this.de = upper | data;
+        this.de = upper | Byte.toUnsignedInt(data);
     }
 
     public byte getH() {
@@ -70,7 +71,7 @@ class Register {
     public void setH(byte data) {
         final var upper = data << 8;
         final var lower = this.hl & 0xFF;
-        this.hl = upper | lower;
+        this.hl = (upper | lower) & 0xFFFF;
     }
 
     public byte getL() {

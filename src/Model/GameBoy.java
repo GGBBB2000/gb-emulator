@@ -102,7 +102,7 @@ public class GameBoy {
     public void run() {
         int cycleSum = 0;
         while (cycleSum < 70224) {
-            final int cycle = cpu.stepByInst();
+            final int cycle = cpu.stepByInst() * 4;
             ppu.run(cycle);
             cycleSum += cycle;
         }

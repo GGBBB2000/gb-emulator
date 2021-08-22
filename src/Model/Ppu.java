@@ -74,6 +74,7 @@ class Ppu {
                     cycle -= 2;
                     // TODO: read OAM
                     if ((this.cycleSum % lineCycle) - cycle >= 80) {
+                        this.pixelFIFO.setScrollCounter(Byte.toUnsignedInt(this.scx));
                         this.mode = PPU_MODE.DRAWING;
                     }
                 }
@@ -283,6 +284,7 @@ class Ppu {
         private byte tileDataHigh;
         private int xPositionCounter;
         private final int VRAM_BASE_ADDER = 0x8000;
+
         enum FetchMode {
             GET_TILE,
             GET_DATA_LOW,
@@ -341,8 +343,8 @@ class Ppu {
         }
 
         private void getTileHigh() {
-            final int ly = Ppu.this.ly;
-            final int scy = Ppu.this.scy;
+            final int ly = Byte.toUnsignedInt(Ppu.this.ly);
+            final int scy = Byte.toUnsignedInt(Ppu.this.scy);
             final int BASE_ADDER = 0x9000;
             final int offset = this.tileNum * 16 + (2 * ((ly + scy) % 8));
             final int address = BASE_ADDER + offset + 1;
@@ -376,10 +378,15 @@ class Ppu {
     private class PixelFIFO extends ArrayDeque<Pixcel> {
         private final Lcd lcd;
         private int pixelCounter = 0;
+        private int scrollCounter = 0;
 
         private PixelFIFO(final Lcd lcd) {
             super(16); // FIFO has 16 pixel data
             this.lcd = lcd;
+        }
+
+        public void setScrollCounter(int scrollCounter) {
+            this.scrollCounter = scrollCounter % 8;
         }
 
         private int getPixelCounter() {
@@ -387,10 +394,14 @@ class Ppu {
         }
 
         private void pushPixelsToLCD() {
-            final var pixel = this.poll();
+            Pixcel pixel = this.poll();
             if (pixel != null) {
-                this.lcd.draw(pixel.color);
-                this.pixelCounter++;
+                if (this.scrollCounter == 0) {
+                    this.lcd.draw(pixel.color);
+                    this.pixelCounter++;
+                } else {
+                    this.scrollCounter--;
+                }
             }
         }
 
