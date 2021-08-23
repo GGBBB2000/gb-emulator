@@ -72,8 +72,9 @@ class Cpu {
     }
 
     private int pop2Byte() {
+        final int ret = this.readAddress(this.register.sp);
         this.register.sp += 2;
-        return this.readAddress(this.register.sp);
+        return ret;
     }
 
     private byte get8bitDataByParam(Params param) {
@@ -184,9 +185,16 @@ class Cpu {
                 final int data = this.pop2Byte();
                 this.set16bitDataByParam(instInfo.to(), data);
             }
-            //case ADD -> { // 8bit ALU
-
-            //}
+            case ADD -> { // 8bit ALU
+                final int from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
+                final int to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to()));
+                final int result = from + to;
+                this.set8bitDataByParam(instInfo.to(), (byte)result);
+                this.register.setZ((result & 0xFF) == 0);
+                this.register.setN(false);
+                this.register.setHC((((from & 0xF) + (to & 0xF)) & 0xF) == 0);
+                this.register.setFC((result >>> 8) != 0);
+            }
             //case ADC -> {
             //}
             //case SUB -> {}
@@ -261,6 +269,7 @@ class Cpu {
             // case CCF -> {}
             // case SCF -> {}
             case NOP -> {}
+            case HALT -> {}
             // case STOP -> {}
             case DI -> this.imeFlag = false; // disable interrupt IME <- false
             case EI -> this.imeFlag = true; // Interrupts are enabled after instruction after EI is executed
@@ -335,7 +344,35 @@ class Cpu {
                 this.register.pc = address;
              }
             // case RST -> {}
-            // RET -> {} // Returns
+             case RET -> { // Returns
+                 int address = this.register.pc;
+                 switch (instInfo.to()) {
+                     case NONE -> address = this.pop2Byte();
+                     case CC_C -> {
+                         if (this.register.getFC()) {
+                             address = this.pop2Byte();
+                         }
+                     }
+                     case CC_NC -> {
+                         if (!this.register.getFC()) {
+                             address = this.pop2Byte();
+                         }
+                     }
+                     case CC_Z -> {
+                         if (this.register.getZ()) {
+                             address = this.pop2Byte();
+                         }
+                     }
+                     case CC_NZ -> {
+                         if (!this.register.getZ()) {
+                             address = this.pop2Byte();
+                         }
+                     }
+                     default -> throw new IllegalArgumentException(String.format("CALL: [%s] Illegal argument!\n", instInfo.to()));
+                 }
+                 this.register.pc = address;
+             }
+
             // RETI -> {}
             default -> throw new ExecutionControl.NotImplementedException(String.format("[%s]: not implemented or Illegal instruction!\n", instInfo));
         }
