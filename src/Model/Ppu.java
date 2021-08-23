@@ -395,7 +395,7 @@ class Ppu {
 
         private void pushPixelsToLCD() {
             Pixcel pixel = this.poll();
-            if (pixel != null) {
+            if (pixel != null && this.pixelCounter < 160) {
                 if (this.scrollCounter == 0) {
                     this.lcd.draw(pixel.color);
                     this.pixelCounter++;
