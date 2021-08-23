@@ -373,7 +373,10 @@ class Cpu {
                  this.register.pc = address;
              }
 
-            // RETI -> {}
+            case RETI -> {
+                this.register.pc = this.pop2Byte();
+                this.imeFlag = true;
+            }
             default -> throw new ExecutionControl.NotImplementedException(String.format("[%s]: not implemented or Illegal instruction!\n", instInfo));
         }
     }
