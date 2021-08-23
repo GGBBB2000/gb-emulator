@@ -189,7 +189,7 @@ class Ppu {
             return ((this.register & 0b0010_0000) >> 5) == 1;
         }
 
-        boolean getBGWindowTileDataAreaFlag() {
+        boolean getBGDataAreaFlag() {
             return ((this.register & 0b0001_0000) >> 4) == 1;
         }
 
@@ -326,8 +326,10 @@ class Ppu {
             final int yIndex = ((scy + ly) & 0xFF) / 8;
             final int tileIndex = 32 * yIndex + xIndex;
             final int tileAdder = tileMapBaseAdder + tileIndex - this.VRAM_BASE_ADDER;
+            final boolean bgDataAreaFlag = Ppu.this.lcdControl.getBGDataAreaFlag(); // true: tileNum is unsigned
+            final var num = Ppu.this.vRam.read(tileAdder);
+            this.tileNum = (bgDataAreaFlag) ? Byte.toUnsignedInt(num) : num;
             this.xPositionCounter++;
-            this.tileNum = Ppu.this.vRam.read(tileAdder);
             this.mode = FetchMode.GET_DATA_LOW;
         }
 
@@ -335,7 +337,8 @@ class Ppu {
             // BG and Window data area LCDC.4: 0=8800-97FF 1=8000-8FFF
             final int ly = Byte.toUnsignedInt(Ppu.this.ly);
             final int scy = Byte.toUnsignedInt(Ppu.this.scy);
-            final int BASE_ADDER = 0x9000; // if LCDC.4 is 0, base adder will be 9000. otherwise 8000 TODO impl changing base ptr
+            final boolean bgDataAreaFlag = Ppu.this.lcdControl.getBGDataAreaFlag();
+            final int BASE_ADDER = (bgDataAreaFlag) ? 0x8000 : 0x9000; // if LCDC.4 is 0, base adder will be 9000. otherwise 8000
             final int offset = this.tileNum * 16 + (2 * ((ly + scy) % 8));
             final int address = BASE_ADDER + offset;
             this.tileDataLow = Ppu.this.vRam.read(address - this.VRAM_BASE_ADDER);
@@ -345,7 +348,8 @@ class Ppu {
         private void getTileHigh() {
             final int ly = Byte.toUnsignedInt(Ppu.this.ly);
             final int scy = Byte.toUnsignedInt(Ppu.this.scy);
-            final int BASE_ADDER = 0x9000;
+            final boolean bgDataAreaFlag = Ppu.this.lcdControl.getBGDataAreaFlag();
+            final int BASE_ADDER = (bgDataAreaFlag) ? 0x8000 : 0x9000; // if LCDC.4 is 0, base adder will be 9000. otherwise 8000
             final int offset = this.tileNum * 16 + (2 * ((ly + scy) % 8));
             final int address = BASE_ADDER + offset + 1;
             this.tileDataHigh = Ppu.this.vRam.read(address - this.VRAM_BASE_ADDER);

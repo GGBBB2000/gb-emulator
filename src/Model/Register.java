@@ -42,7 +42,7 @@ class Register {
 
     public void setC(byte data) {
         final var upper = this.bc & 0xFF00;
-        this.bc = upper | data;
+        this.bc = upper | Byte.toUnsignedInt(data);
     }
 
     public byte getD() {
@@ -80,7 +80,7 @@ class Register {
 
     public void setL(byte data) {
         final var upper = this.hl & 0xFF00;
-        this.hl = upper | data;
+        this.hl = upper | Byte.toUnsignedInt(data);
     }
 
     public boolean getZ() {
@@ -139,6 +139,7 @@ class Register {
                 ", bc=" + String.format("0x%X", bc) +
                 ", de=" + String.format("0x%X", de) +
                 ", hl=" + String.format("0x%X", hl) +
+                ", sp=" + String.format("0x%X", sp) +
                 ", z=" + getZ() +
                 ", n=" + getN() +
                 ", h=" + getHC() +
