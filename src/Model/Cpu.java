@@ -298,7 +298,42 @@ class Cpu {
                     default -> n;
                 };
             }
-            // case CALL -> {} // Calls
+             case CALL -> { // Calls
+                int address = this.get16bitDataByParam(instInfo.from());
+                switch (instInfo.to()) {
+                    case NONE -> this.push2Byte(this.register.pc);
+                    case CC_C -> {
+                        if (this.register.getFC()) {
+                            this.push2Byte(this.register.pc);
+                        } else {
+                            address = this.register.pc;
+                        }
+                    }
+                    case CC_NC -> {
+                        if (!this.register.getFC()) {
+                            this.push2Byte(this.register.pc);
+                        } else {
+                            address = this.register.pc;
+                        }
+                    }
+                    case CC_Z -> {
+                        if (this.register.getZ()) {
+                            this.push2Byte(this.register.pc);
+                        } else {
+                            address = this.register.pc;
+                        }
+                    }
+                    case CC_NZ -> {
+                        if (!this.register.getZ()) {
+                            this.push2Byte(this.register.pc);
+                        } else {
+                            address = this.register.pc;
+                        }
+                    }
+                    default -> throw new IllegalArgumentException(String.format("CALL: [%s] Illegal argument!\n", instInfo.to()));
+                }
+                this.register.pc = address;
+             }
             // case RST -> {}
             // RET -> {} // Returns
             // RETI -> {}
