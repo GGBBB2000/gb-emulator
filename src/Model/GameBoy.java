@@ -98,7 +98,6 @@ public class GameBoy {
         }
     }
 
-    int count = 0;
     public void run() {
         int cycleSum = 0;
         while (cycleSum < 70224) {
@@ -106,9 +105,5 @@ public class GameBoy {
             ppu.run(cycle);
             cycleSum += cycle;
         }
-        if (count++ % 59 == 0) {
-            System.out.println(count / 60);
-        }
-        count %= 600;
     }
 }

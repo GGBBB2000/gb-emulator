@@ -17,9 +17,9 @@ class Cpu {
         return this.bus.read(address);
     }
 
-    private int read2Byte(final int address) {
-        final int upperByte = this.read(address);
-        final int lowerByte = this.read(address - 1);
+    private int readAddress(final int address) {
+        final int lowerByte = Byte.toUnsignedInt(this.read(address));
+        final int upperByte = Byte.toUnsignedInt(this.read(address + 1));
         return (upperByte << 8) | lowerByte;
     }
 
@@ -37,7 +37,7 @@ class Cpu {
         this.bus.write(address, data);
     }
 
-    private void write2Byte(final int address, final int data) {
+    private void writeAddress(final int address, final int data) {
         final byte lowerByte = (byte) (0xFF & data);
         final byte upperByte = (byte) ((0xFF00 & data) >> 8);
         this.write(address, lowerByte);
@@ -66,6 +66,16 @@ class Cpu {
         }
     }
 
+    private void push2Byte(int data) {
+        this.register.sp -= 2;
+        this.writeAddress(this.register.sp, data);
+    }
+
+    private int pop2Byte() {
+        this.register.sp += 2;
+        return this.readAddress(this.register.sp);
+    }
+
     private byte get8bitDataByParam(Params param) {
         return switch (param) {
             case A -> this.register.getA();
@@ -89,17 +99,6 @@ class Cpu {
         };
     }
 
-    private void push1Byte(int data) {
-        this.write2Byte(this.register.sp, data);
-        this.register.sp -= 2;
-    }
-
-    private int pop1Byte() {
-        final var ret = this.read2Byte(this.register.sp);
-        this.register.sp -= 2;
-        return ret;
-    }
-
     private void set16bitDataByParam(Params param, int data) {
         switch (param) {
             case AF -> this.register.af = data;
@@ -108,7 +107,7 @@ class Cpu {
             case HL -> this.register.hl = data;
             case SP -> this.register.sp = data;
             case PC -> this.register.pc = data;
-            case NN -> this.write2Byte(param.getImmediateVal(), data);
+            case NN -> this.writeAddress(param.getImmediateVal(), data);
         }
     }
 
@@ -179,10 +178,10 @@ class Cpu {
             }
             case PUSH -> {
                 final int data = this.get16bitDataByParam(instInfo.from());
-                this.push1Byte(data);
+                this.push2Byte(data);
             }
             case POP -> {
-                final int data = this.pop1Byte();
+                final int data = this.pop2Byte();
                 this.set16bitDataByParam(instInfo.to(), data);
             }
             //case ADD -> { // 8bit ALU
