@@ -137,7 +137,8 @@ class Cpu {
             final int irf = this.read(0xFF0F); // interrupt request flag
             for (int i = 0; i < 5; i++) {
                 final var flagEnabled = ((ie >>> i) & 0x1) == 1;
-                if (flagEnabled) {
+                final var flagRequested = ((irf >>> i) & 0x1) == 1;
+                if (flagEnabled && flagRequested) {
                     final int vector = interruptVector[i];
                     final int bitMask = (~(1 << i)) & 0b0001_1111 ; // if i == 2  1 << 2 -> 0b0000_0100 -> (inverse, and)　0b0001_1011
                     this.write(0xFF0F, (byte)(irf & bitMask));
