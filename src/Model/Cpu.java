@@ -124,17 +124,30 @@ class Cpu {
         };
     }
 
-    public int stepByInst() {
-
-        final var op = readImmediateN();
-        final var instInfo = parse(op);
-        try {
-            execInstruction(instInfo);
-        } catch (ExecutionControl.NotImplementedException | IllegalArgumentException e) {
-            e.printStackTrace();
+    private boolean checkInterrupt() {
+        if (this.imeFlag) {
+            final var interruptVector = new int[]{
+                    0x40, // vblank
+                    0x48, // lcd stat
+                    0x50, // timer
+                    0x58, // serial
+                    0x60  // joypad
+            };
+            final int ie = this.read(0xFFFF); // interrupt enable
+            final int irf = this.read(0xFF0F); // interrupt request flag
+            for (int i = 0; i < 5; i++) {
+                final var flagEnabled = ((ie >>> i) & 0x1) == 1;
+                if (flagEnabled) {
+                    final int vector = interruptVector[i];
+                    final int bitMask = (~(1 << i)) & 0b0001_1111 ; // if i == 2  1 << 2 -> 0b0000_0100 -> (inverse, and)　0b0001_1011
+                    this.write(0xFF0F, (byte)(irf & bitMask));
+                    this.push2Byte(this.register.pc);
+                    this.register.pc = vector & 0x00FF;
+                    return true;
+                }
+            }
         }
-        //System.out.printf("%-20s %s IME=%b\n", instInfo, this.register.toString(), this.imeFlag);
-        return instInfo.cycle();
+        return false;
     }
 
     private InstructionInfo parse(byte opcode) {
@@ -155,6 +168,21 @@ class Cpu {
             case NN -> info.to().setImmediateVal(readImmediateAddr());
         }
         return info;
+    }
+
+    public int stepByInst() {
+        if (this.checkInterrupt()) {
+            return 4 * 5; // interrupt takes 5 machine cycle
+        }
+        final var op = readImmediateN();
+        final var instInfo = parse(op);
+        try {
+            execInstruction(instInfo);
+        } catch (ExecutionControl.NotImplementedException | IllegalArgumentException e) {
+            e.printStackTrace();
+        }
+        //System.out.printf("%-20s %s IME=%b\n", instInfo, this.register.toString(), this.imeFlag);
+        return instInfo.cycle();
     }
 
     private void execInstruction(final InstructionInfo instInfo) throws ExecutionControl.NotImplementedException {

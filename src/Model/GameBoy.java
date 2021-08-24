@@ -17,6 +17,7 @@ public class GameBoy {
     Cpu cpu;
     Bus bus;
     Ppu ppu;
+    InterruptRegister interruptRegister;
     VRam vRam;
     WRam wRam;
     Cartridge cartridge;
@@ -26,8 +27,9 @@ public class GameBoy {
         this.lcd = new Lcd(160, 144);
         this.vRam = new VRam();
         this.wRam = new WRam();
-        this.ppu = new Ppu(this.vRam, this.lcd);
-        this.bus = new Bus(this.vRam, this.wRam, this.ppu);
+        this.interruptRegister = new InterruptRegister();
+        this.ppu = new Ppu(this.vRam, this.lcd, this.interruptRegister);
+        this.bus = new Bus(this.vRam, this.wRam, this.ppu, this.interruptRegister);
         this.cpu = new Cpu(this.bus);
         this.service = Executors.newSingleThreadScheduledExecutor();
         this.pcs = new PropertyChangeSupport(this);

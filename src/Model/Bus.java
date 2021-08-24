@@ -5,15 +5,19 @@ class Bus {
     final WRam wram;
     final VRam vram;
     final Ppu ppu;
+    final InterruptRegister interruptRegister;
     final byte[] extVram; // 8KiB
     final byte[] attributeTable;
+    final byte[] hRam;
 
-    public Bus(VRam vRam, WRam wRam, Ppu ppu) {
+    public Bus(VRam vRam, WRam wRam, Ppu ppu, InterruptRegister interruptRegister) {
         this.wram = wRam;
         this.vram = vRam;
         this.ppu = ppu;
+        this.interruptRegister = interruptRegister;
         this.extVram = new byte[8 * 1024]; // 16KiB
         this.attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
+        this.hRam = new byte[0x7F];
     }
 
     public void connectCartridge(final Cartridge cartridge) {
@@ -40,13 +44,15 @@ class Bus {
         } else if (address < 0xFF00) {  // Not Usable
             // do nothing
         } else if (address < 0xFF80) {  // I/O Registers
-            if (0xFF40 <= address && address <= 0xFF4A) {
+            if (address == 0xFF0F) {
+                this.interruptRegister.setInterruptRequestFlag(data);
+            } else if (0xFF40 <= address && address <= 0xFF4A) {
                 this.ppu.write(address, data);
             }
         } else if (address < 0xFFFF) {  // High RAM (HRAM)
-            // ?
+            this.hRam[address - 0xFF80] = data;
         } else if (address == 0xFFFF) { // Interrupt Enable register
-
+            this.interruptRegister.setInterruptEnable(data);
         }
     }
 
@@ -71,13 +77,15 @@ class Bus {
         } else if (address < 0xFF00) {  // Not Usable
             // do nothing
         } else if (address < 0xFF80) {  // I/O Registers
-            if (0xFF40 <= address && address <= 0xFF4A) {
+            if (address == 0xFF0F) {
+                returnVal = this.interruptRegister.getInterruptRequestFlag();
+            } else if (0xFF40 <= address && address <= 0xFF4A) {
                 returnVal = this.ppu.read(address);
             }
         } else if (address < 0xFFFF) {  // High RAM (HRAM)
-
+            returnVal = this.hRam[address - 0xFF80];
         } else if (address == 0xFFFF) { // Interrupt Enable register
-
+            returnVal = this.interruptRegister.getInterruptEnable();
         }
         return returnVal;
     }

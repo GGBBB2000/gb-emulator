@@ -16,6 +16,7 @@ class Ppu {
     byte wx;                 // 0xFF4B WX (Window X Position + 7)
     // 0xFF68 BCPS/BGPI (Background Color Palette Specification or Background Palette Index)
     // 0xFF69 BCPS/BGPI (Background Color Palette Data or Background Palette Data)
+    final InterruptRegister interruptRegister;
     final PixelFetcher pixelFetcher;
     final PixelFIFO pixelFIFO;
 
@@ -37,7 +38,7 @@ class Ppu {
         }
     }
 
-    public Ppu(VRam vRam, Lcd lcd) {
+    public Ppu(VRam vRam, Lcd lcd, InterruptRegister interruptRegister) {
         this.vRam = vRam;
         this.lcd = lcd;
         this.mode = PPU_MODE.OAM_SCAN;
@@ -54,6 +55,7 @@ class Ppu {
         this.obp1 = 0;
         this.wy = 0;
         this.wx = 0;
+        this.interruptRegister = interruptRegister;
         this.cycleSum = 0;
     }
 
@@ -93,6 +95,7 @@ class Ppu {
                     final int currentLine = Byte.toUnsignedInt(this.ly);
                     if (this.cycleSum / lineCycle > currentLine) {
                         if (currentLine == 143) {
+                            this.interruptRegister.setVBlankInterrupt(true);
                             this.mode = PPU_MODE.V_BLANK;
                         } else {
                             this.mode = PPU_MODE.OAM_SCAN;
@@ -362,7 +365,7 @@ class Ppu {
                 for (int i = 7; i >= 0; i--) {
                     final int lowBit = (this.tileDataLow >>> i) & 1;
                     final int highBit = (this.tileDataHigh >>> (i - 1)) & 0b10;
-                    final byte colorIndex = (byte)(highBit + lowBit);
+                    final byte colorIndex = (byte)(highBit | lowBit);
                     final byte pixelData = this.mapColorIndexToColor(colorIndex);
                     final Pixcel pixcel = new Pixcel(pixelData, 0, 0, 0);
                     fifo.offerLast(pixcel);
