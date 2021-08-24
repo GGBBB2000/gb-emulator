@@ -17,7 +17,7 @@ final class Cartridge {
     public byte[] globalCheckSum;
     public byte[] rom;
 
-    public byte read(final int address) {
+    byte read(final int address) {
         return this.rom[address]; // TODO impl MBC
     }
 
