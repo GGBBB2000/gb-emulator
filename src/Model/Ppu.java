@@ -364,8 +364,8 @@ class Ppu {
             if (fifo.hasEnoughSpace()) {
                 for (int i = 7; i >= 0; i--) {
                     final int lowBit = (this.tileDataLow >>> i) & 1;
-                    final int highBit = (this.tileDataHigh >>> (i - 1)) & 0b10;
-                    final byte colorIndex = (byte)(highBit | lowBit);
+                    final int highBit = (this.tileDataHigh >>> i) & 1;
+                    final byte colorIndex = (byte)((highBit << 1) | lowBit);
                     final byte pixelData = this.mapColorIndexToColor(colorIndex);
                     final Pixcel pixcel = new Pixcel(pixelData, 0, 0, 0);
                     fifo.offerLast(pixcel);
