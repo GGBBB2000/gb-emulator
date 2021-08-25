@@ -281,7 +281,29 @@ class Cpu {
                 this.register.setN(true);
                 this.register.setHC((data & 0xF) > 1);
             }
-            // case ADD(16bit) -> {} //16bit Arithmetic
+            case WADD -> { //16bit Arithmetic
+                switch (instInfo.to()) {
+                    case HL -> {
+                        final var from = this.get16bitDataByParam(instInfo.from());
+                        final var to = this.get16bitDataByParam(instInfo.to());
+                        final var result = (from + to) & 0xFFFF;
+                        this.set16bitDataByParam(instInfo.to(), result);
+                        this.register.setHC(((((from & 0x07FF) + (to & 0x07FF))) & 0x800) != 0); // carry from bit 11
+                        this.register.setFC(((((from & 0x7FFF) + (to & 0x7FFF))) & 0x8000) != 0); // carry from bit 15
+                    }
+                    case SP -> {
+                        final int from = this.get8bitDataByParam(instInfo.from()); // read N as signed value
+                        final var to = this.get16bitDataByParam(instInfo.to());
+                        final var result = (from + to) & 0xFFFF;
+                        this.set16bitDataByParam(instInfo.to(), result);
+                        this.register.setZ(false);
+                        this.register.setHC(((((from & 0x07FF) + (to & 0x07FF))) & 0x800) != 0); // carry from bit 11
+                        this.register.setFC(((((from & 0x7FFF) + (to & 0x7FFF))) & 0x8000) != 0); // carry from bit 15
+                    }
+                    default -> throw new IllegalArgumentException(String.format("WADD: do not use [%s] as TO argument\n", instInfo.to()));
+                }
+                this.register.setN(false);
+            }
             case WINC -> { // 16bit INC
                 final var data = this.get16bitDataByParam(instInfo.from());
                 final int result = data + 1;
@@ -406,7 +428,7 @@ class Cpu {
                 this.register.pc = this.pop2Byte();
                 this.imeFlag = true;
             }
-            default -> throw new ExecutionControl.NotImplementedException(String.format("[%s]: not implemented or Illegal instruction!\n", instInfo));
+            default -> throw new ExecutionControl.NotImplementedException(String.format("[%s @ 0x%4X]: not implemented or Illegal instruction!\n", instInfo, this.register.pc));
         }
     }
 }
