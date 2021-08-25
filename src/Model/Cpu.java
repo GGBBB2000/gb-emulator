@@ -314,9 +314,24 @@ class Cpu {
                 final int result = data - 1;
                 this.set16bitDataByParam(instInfo.to(), result);
             }
-            // case SWAP -> {} // Miscellaneous
+            case SWAP -> { // Miscellaneous
+                final var data = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
+                final var upper = (data & 0xF0) >> 4;
+                final var lower = data & 0x0F;
+                final var result = (byte)((lower << 4) | upper);
+                this.set8bitDataByParam(instInfo.to(), result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(false);
+            }
             // case DAA -> {}
-            // case CPL -> {}
+            case CPL -> {
+                final var result = (byte)((~this.register.getA()) & 0xFF);
+                this.register.setA(result);
+                this.register.setN(true);
+                this.register.setHC(true);
+            }
             // case CCF -> {}
             // case SCF -> {}
             case NOP -> {}
