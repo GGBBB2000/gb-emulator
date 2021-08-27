@@ -92,6 +92,14 @@ class Cpu {
             case HL -> this.read(this.register.hl);
             case N -> (byte) param.getImmediateVal(); //　怪しい
             case NN, INDEXED_N -> this.read(param.getImmediateVal());
+            case BIT0 -> (byte)0;
+            case BIT1 -> (byte)1;
+            case BIT2 -> (byte)2;
+            case BIT3 -> (byte)3;
+            case BIT4 -> (byte)4;
+            case BIT5 -> (byte)5;
+            case BIT6 -> (byte)6;
+            case BIT7 -> (byte)7;
             case CC_C -> (this.register.getHC()) ? (byte) 0 : (byte) param.getImmediateVal(); // read as singed value!
             case CC_NC -> !(this.register.getHC()) ? (byte) 0 : (byte) param.getImmediateVal();
             case CC_Z -> (this.register.getZ()) ? (byte) 0 : (byte) param.getImmediateVal();
@@ -350,7 +358,15 @@ class Cpu {
             // case SLA -> {}
             // case SRA -> {}
             // case SRL -> {}
-            // case BIT -> {} // Bit Opcodes
+            case BIT -> { // Bit Opcodes
+                final var bitIndex = this.get8bitDataByParam(instInfo.to());
+                final var bitMask = 1 << bitIndex;
+                final byte data = this.get8bitDataByParam(instInfo.from());
+                final var result = data & bitMask;
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(true);
+            }
             // case SET -> {}
             // case RES -> {}
             case JP -> {
