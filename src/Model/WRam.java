@@ -1,6 +1,6 @@
 package Model;
 
-class WRam {
+class WRam implements IODevice {
     final byte[][] ram;
     int bank; // bank number: 1~7
 
@@ -9,6 +9,7 @@ class WRam {
         this.bank = 1;
     }
 
+    @Override
     public byte read(final int address) {
         if (address < 0x2000) {
             return this.ram[0][address];
@@ -17,6 +18,7 @@ class WRam {
         }
     }
 
+    @Override
     public void write(final int address, byte data) {
         if (address < 0x2000) {
             this.ram[0][address] = data;

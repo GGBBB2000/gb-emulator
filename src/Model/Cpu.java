@@ -2,7 +2,7 @@ package Model;
 
 import jdk.jshell.spi.ExecutionControl;
 
-class Cpu {
+class Cpu implements IODevice {
     Register register;
     Bus bus;
     boolean imeFlag;
@@ -13,7 +13,8 @@ class Cpu {
         this.imeFlag = false;
     }
 
-    private byte read(final int address) {
+    @Override
+    public byte read(final int address) {
         return this.bus.read(address);
     }
 
@@ -33,7 +34,8 @@ class Cpu {
         return (upperByte << 8) | lowerByte;
     }
 
-    private void write(final int address, final byte data) {
+    @Override
+    public void write(final int address, final byte data) {
         this.bus.write(address, data);
     }
 

@@ -1,6 +1,6 @@
 package Model;
 
-final class Cartridge {
+final class Cartridge implements IODevice {
     public byte[] logo; // nintendo logo
     public String title;
     public byte[] manufactureCode;
@@ -17,9 +17,13 @@ final class Cartridge {
     public byte[] globalCheckSum;
     public byte[] rom;
 
-    byte read(final int address) {
+    @Override
+    public byte read(final int address) {
         return this.rom[address]; // TODO impl MBC
     }
+
+    @Override
+    public void write(int address, byte data) { }
 
     @Override
     public String toString() {

@@ -2,7 +2,7 @@ package Model;
 
 import java.util.ArrayDeque;
 
-class Ppu {
+class Ppu implements IODevice {
     final LcdControl lcdControl;
     final LcdStat lcdStat;  // 0xFF41 STAT
     byte scy;                // 0xFF42 Scroll Y
@@ -118,6 +118,7 @@ class Ppu {
         //System.out.printf("PPU: MODE:%s cycle: %d line: %d\n", mode.toString(), this.cycle, this.line);
     }
 
+    @Override
     public byte read(final int address) {
         return switch (address) {
             case 0xFF40 -> this.lcdControl.getRegister();
@@ -136,6 +137,7 @@ class Ppu {
         };
     }
 
+    @Override
     public void write(final int address, final byte data) {
         switch (address) {
             case 0xFF40 -> this.lcdControl.setRegister(data);
@@ -245,19 +247,19 @@ class Ppu {
             return register;
         }
 
-        boolean getLYC_LY_STAT_Interrupt() {
+        boolean isLYC_InterruptMode() {
             return ((this.register & 0b0100_0000) >> 6) == 1;
         }
 
-        boolean getMode2_OAM_STAT_Interrupt() {
+        boolean isOAM_InterruptMode() {
             return ((this.register & 0b0010_0000) >> 5) == 1;
         }
 
-        boolean getMode1_VBLANK_STAT_Interrupt() {
+        boolean isVBLANK_InterruptMode() {
             return ((this.register & 0b0001_0000) >> 4) == 1;
         }
 
-        boolean getMode0_HBLANK_STAT_Interrupt() {
+        boolean isHBLANK_InterruptMode() {
             return ((this.register & 0b0000_1000) >> 3) == 1;
         }
 
