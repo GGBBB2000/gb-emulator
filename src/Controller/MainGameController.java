@@ -16,6 +16,7 @@ public class MainGameController implements PropertyChangeListener  {
         final var menuBar = view.getJMenuBar();
         menuBar.getMenu(0).getItem(0).addActionListener(new FileLoader(view, model));
         menuBar.getMenu(1).getItem(0).addActionListener(new PowerOnListener(view, model));
+        this.view.addKeyListener(new JoyPadInputListener(view, model));
         this.model.addPropertyChangeListener(this);
         this.model.addLcdListener(new LcdController(this.view, this.model));
     }

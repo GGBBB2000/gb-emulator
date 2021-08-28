@@ -110,4 +110,21 @@ public class GameBoy {
             cycleSum += cycle;
         }
     }
+
+    public void setKeyState(final int KeyCode, final boolean state) {
+        JoyPad.KeyInput key = null;
+        switch (KeyCode) {
+            case 65 -> key = JoyPad.KeyInput.A;
+            case 83 -> key = JoyPad.KeyInput.B;
+            case 32 -> key = JoyPad.KeyInput.START;
+            case 16 -> key = JoyPad.KeyInput.SELECT;
+            case 37 -> key = JoyPad.KeyInput.LEFT;
+            case 38 -> key = JoyPad.KeyInput.UP;
+            case 39 -> key = JoyPad.KeyInput.RIGHT;
+            case 40 -> key = JoyPad.KeyInput.DOWN;
+        }
+        if (key != null) {
+            this.joyPad.setKeyState(key, state);
+        }
+    }
 }
