@@ -20,16 +20,18 @@ public class GameBoy {
     InterruptRegister interruptRegister;
     VRam vRam;
     WRam wRam;
+    JoyPad joyPad;
     Cartridge cartridge;
     Lcd lcd;
 
     public GameBoy() {
         this.lcd = new Lcd(160, 144);
+        this.joyPad = new JoyPad();
         this.vRam = new VRam();
         this.wRam = new WRam();
         this.interruptRegister = new InterruptRegister();
         this.ppu = new Ppu(this.vRam, this.lcd, this.interruptRegister);
-        this.bus = new Bus(this.vRam, this.wRam, this.ppu, this.interruptRegister);
+        this.bus = new Bus(this.vRam, this.wRam, this.ppu, this.joyPad, this.interruptRegister);
         this.cpu = new Cpu(this.bus);
         this.service = Executors.newSingleThreadScheduledExecutor();
         this.pcs = new PropertyChangeSupport(this);

@@ -5,12 +5,13 @@ class Bus {
     final WRam wram;
     final VRam vram;
     final Ppu ppu;
+    final JoyPad joyPad;
     final InterruptRegister interruptRegister;
     final byte[] extVram; // 8KiB
     final byte[] attributeTable;
     final byte[] hRam;
 
-    public Bus(VRam vRam, WRam wRam, Ppu ppu, InterruptRegister interruptRegister) {
+    public Bus(VRam vRam, WRam wRam, Ppu ppu, JoyPad joyPad, InterruptRegister interruptRegister) {
         this.wram = wRam;
         this.vram = vRam;
         this.ppu = ppu;
@@ -18,6 +19,7 @@ class Bus {
         this.extVram = new byte[8 * 1024]; // 16KiB
         this.attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
         this.hRam = new byte[0x7F];
+        this.joyPad = joyPad;
     }
 
     public void connectCartridge(final Cartridge cartridge) {
@@ -44,7 +46,9 @@ class Bus {
         } else if (address < 0xFF00) {  // Not Usable
             // do nothing
         } else if (address < 0xFF80) {  // I/O Registers
-            if (address == 0xFF0F) {
+            if (address == 0xFF00) {
+                this.joyPad.write(address, data);
+            } else if (address == 0xFF0F) {
                 this.interruptRegister.setInterruptRequestFlag(data);
             } else if (0xFF40 <= address && address <= 0xFF4A) {
                 this.ppu.write(address, data);
@@ -77,7 +81,9 @@ class Bus {
         } else if (address < 0xFF00) {  // Not Usable
             // do nothing
         } else if (address < 0xFF80) {  // I/O Registers
-            if (address == 0xFF0F) {
+            if (address == 0xFF00) {
+                returnVal = this.joyPad.read(address);
+            } else if (address == 0xFF0F) {
                 returnVal = this.interruptRegister.getInterruptRequestFlag();
             } else if (0xFF40 <= address && address <= 0xFF4A) {
                 returnVal = this.ppu.read(address);
