@@ -6,11 +6,13 @@ class Cpu implements IODevice {
     Register register;
     Bus bus;
     boolean imeFlag;
+    boolean isHalt;
 
     public Cpu(Bus bus) {
         this.register = new Register();
         this.bus = bus;
         this.imeFlag = false;
+        this.isHalt = false;
     }
 
     @Override
@@ -155,6 +157,7 @@ class Cpu implements IODevice {
                     this.push2Byte(this.register.pc);
                     this.register.pc = vector & 0x00FF;
                     this.imeFlag = false;
+                    this.isHalt = false;
                     return true;
                 }
             }
@@ -185,6 +188,9 @@ class Cpu implements IODevice {
     public int stepByInst() {
         if (this.checkInterrupt()) {
             return 4 * 5; // interrupt takes 5 machine cycle
+        }
+        if (this.isHalt) {
+            return 4; // same as NOP
         }
         final var op = readImmediateN();
         final var instInfo = parse(op);
@@ -338,15 +344,18 @@ class Cpu implements IODevice {
             }
             // case DAA -> {}
             case CPL -> {
-                final var result = (byte)((~this.register.getA()) & 0xFF);
+                final var result = (byte) ((~this.register.getA()) & 0xFF);
                 this.register.setA(result);
                 this.register.setN(true);
                 this.register.setHC(true);
             }
             // case CCF -> {}
             // case SCF -> {}
-            case NOP -> {}
-            case HALT -> {}
+            case NOP -> {
+            }
+            case HALT -> {
+                this.isHalt = true;
+            }
             // case STOP -> {}
             case DI -> this.imeFlag = false; // disable interrupt IME <- false
             case EI -> this.imeFlag = true; // Interrupts are enabled after instruction after EI is executed
