@@ -154,6 +154,7 @@ class Cpu implements IODevice {
                     this.write(0xFF0F, (byte)(irf & bitMask));
                     this.push2Byte(this.register.pc);
                     this.register.pc = vector & 0x00FF;
+                    this.imeFlag = false;
                     return true;
                 }
             }
