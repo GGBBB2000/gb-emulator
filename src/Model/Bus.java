@@ -50,7 +50,7 @@ class Bus {
                 this.joyPad.write(address, data);
             } else if (address == 0xFF0F) {
                 this.interruptRegister.setInterruptRequestFlag(data);
-            } else if (0xFF40 <= address && address <= 0xFF4A) {
+            } else if (0xFF40 <= address && address <= 0xFF4B) {
                 this.ppu.write(address, data);
             }
         } else if (address < 0xFFFF) {  // High RAM (HRAM)

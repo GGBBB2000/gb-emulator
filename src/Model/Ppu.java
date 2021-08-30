@@ -85,8 +85,17 @@ class Ppu implements IODevice {
                     this.pixelFetcher.step();
                     this.pixelFIFO.pushPixelsToLCD();
                     this.pixelFIFO.pushPixelsToLCD();
-                    if (this.pixelFIFO.getPixelCounter() >= 160) {
+                    final var pixelCount = this.pixelFIFO.getPixelCount();
+                    final var wx = Byte.toUnsignedInt(this.wx);
+                    final var wy = Byte.toUnsignedInt(this.wy);
+                    final var ly = Byte.toUnsignedInt(this.ly);
+                    if (this.lcdControl.getWindowEnable() && (wx - 7) <= pixelCount && wy <= ly && pixelFetcher.isFetchingBG()) {
                         this.pixelFIFO.clear();
+                        this.pixelFetcher.reset();
+                        this.pixelFetcher.setWindowFetchingMode(true);
+                    }
+                    if (pixelCount >= 160) {
+                        this.pixelFIFO.reset();
                         this.pixelFetcher.reset();
                         this.mode = PPU_MODE.H_BLANK;
                     }
@@ -95,11 +104,14 @@ class Ppu implements IODevice {
                     final int currentLine = Byte.toUnsignedInt(this.ly);
                     if (this.cycleSum / lineCycle > currentLine) {
                         if (currentLine == 143) {
+                            this.pixelFetcher.resetWindowLineCounter();
                             this.interruptRegister.setVBlankInterrupt(true);
                             this.mode = PPU_MODE.V_BLANK;
                         } else {
+                            this.pixelFetcher.incrementWindowLineCounter();
                             this.mode = PPU_MODE.OAM_SCAN;
                         }
+                        this.pixelFetcher.setWindowFetchingMode(false);
                         this.ly++;
                     }
                     cycle = 0;
@@ -186,7 +198,7 @@ class Ppu implements IODevice {
             return ((this.register & 0b1000_0000) >> 7) == 1;
         }
 
-        boolean getWindowTileMapFlag() {
+        boolean getWindowTileMapAreaFlag() {
             return ((this.register & 0b0100_0000) >> 6) == 1;
         }
 
@@ -283,14 +295,16 @@ class Ppu implements IODevice {
     private record Pixcel(byte color, int palette, int priority, int bgPriority) { }
 
     private class PixelFetcher {
-        private FetchMode mode;
+        private State state;
+        private boolean isFetchingBG;
         private int tileNum;
         private byte tileDataLow;
         private byte tileDataHigh;
         private int xPositionCounter;
+        private int windowLineCounter;
         private final int VRAM_BASE_ADDER = 0x8000;
 
-        enum FetchMode {
+        enum State {
             GET_TILE,
             GET_DATA_LOW,
             GET_DATA_HIGH,
@@ -300,42 +314,70 @@ class Ppu implements IODevice {
 
         private PixelFetcher() {
             this.reset();
+            this.resetWindowLineCounter();
+        }
+
+        private boolean isFetchingBG() {
+            return this.isFetchingBG;
         }
 
         private void reset() {
-            this.mode = FetchMode.GET_TILE;
+            this.state = State.GET_TILE;
             this.xPositionCounter = 0;
             this.tileNum = 0;
         }
 
+        private void resetWindowLineCounter() {
+            if (Ppu.this.lcdControl.getWindowEnable() && !this.isFetchingBG) {
+                this.windowLineCounter = 0;
+            }
+        }
+
+        private void incrementWindowLineCounter() {
+            if (Ppu.this.lcdControl.getWindowEnable() && !this.isFetchingBG) {
+                this.windowLineCounter++;
+            }
+        }
+
+        public void setWindowFetchingMode(boolean isFetchingWin) {
+            this.isFetchingBG = !isFetchingWin;
+        }
+
         public void step() {
-            switch (this.mode) {
+            switch (this.state) {
                 case GET_TILE -> this.getTile();
                 case GET_DATA_LOW -> this.getTileLow();
                 case GET_DATA_HIGH -> this.getTileHigh();
                 case PUSH -> this.pushPixelToFIFO();
-                case SLEEP -> {}
+                case SLEEP -> {
+                }
             }
         }
 
         private void getTile() {
             int tileMapBaseAdder = 0x9800;
-            if (Ppu.this.lcdControl.getBGTileMapAreaFlag() /* && current line is not inside window*/) { // BG Tilemap true: 0x9C00~ false: 0x9800~
-                tileMapBaseAdder = 0x9C00;
+            if (this.isFetchingBG) {
+                if (Ppu.this.lcdControl.getBGTileMapAreaFlag()) { // lcdc: bit6 BG Tilemap true: 0x9C00~ false: 0x9800~
+                    tileMapBaseAdder = 0x9C00;
+                }
+            } else {
+                if (Ppu.this.lcdControl.getWindowTileMapAreaFlag()) { // lcdc: bit3
+                    tileMapBaseAdder = 0x9C00;
+                }
             }
             // only for rendering bg
             final int scx = Byte.toUnsignedInt(Ppu.this.scx);
             final int scy = Byte.toUnsignedInt(Ppu.this.scy);
             final int ly = Byte.toUnsignedInt(Ppu.this.ly);
-            final int xIndex = ((scx) / 8 + this.xPositionCounter) & 0x1F; // this.x should be 0 ~ 31
-            final int yIndex = ((scy + ly) & 0xFF) / 8;
+            final int xIndex = (this.isFetchingBG) ? (((scx) / 8 + this.xPositionCounter) & 0x1F) : (this.xPositionCounter & 0x1F); // this.x should be 0 ~ 31
+            final int yIndex = (this.isFetchingBG) ? (((scy + ly) & 0xFF) / 8) : (windowLineCounter / 8);
             final int tileIndex = 32 * yIndex + xIndex;
-            final int tileAdder = tileMapBaseAdder + tileIndex - this.VRAM_BASE_ADDER;
+            final int tileAdder = tileMapBaseAdder + tileIndex;
             final boolean bgDataAreaFlag = Ppu.this.lcdControl.getBGDataAreaFlag(); // true: tileNum is unsigned
-            final var num = Ppu.this.vRam.read(tileAdder);
+            final var num = Ppu.this.vRam.read(tileAdder - this.VRAM_BASE_ADDER);
             this.tileNum = (bgDataAreaFlag) ? Byte.toUnsignedInt(num) : num;
             this.xPositionCounter++;
-            this.mode = FetchMode.GET_DATA_LOW;
+            this.state = State.GET_DATA_LOW;
         }
 
         private void getTileLow() {
@@ -344,10 +386,11 @@ class Ppu implements IODevice {
             final int scy = Byte.toUnsignedInt(Ppu.this.scy);
             final boolean bgDataAreaFlag = Ppu.this.lcdControl.getBGDataAreaFlag();
             final int BASE_ADDER = (bgDataAreaFlag) ? 0x8000 : 0x9000; // if LCDC.4 is 0, base adder will be 9000. otherwise 8000
-            final int offset = this.tileNum * 16 + (2 * ((ly + scy) % 8));
+            final int offset = this.tileNum * 16 + ((this.isFetchingBG) ? ((2 * ((ly + scy) % 8)))
+                    : (2 * (windowLineCounter % 8)));
             final int address = BASE_ADDER + offset;
             this.tileDataLow = Ppu.this.vRam.read(address - this.VRAM_BASE_ADDER);
-            this.mode = FetchMode.GET_DATA_HIGH;
+            this.state = State.GET_DATA_HIGH;
         }
 
         private void getTileHigh() {
@@ -355,10 +398,11 @@ class Ppu implements IODevice {
             final int scy = Byte.toUnsignedInt(Ppu.this.scy);
             final boolean bgDataAreaFlag = Ppu.this.lcdControl.getBGDataAreaFlag();
             final int BASE_ADDER = (bgDataAreaFlag) ? 0x8000 : 0x9000; // if LCDC.4 is 0, base adder will be 9000. otherwise 8000
-            final int offset = this.tileNum * 16 + (2 * ((ly + scy) % 8));
+            final int offset = this.tileNum * 16 + ((this.isFetchingBG) ? ((2 * ((ly + scy) % 8)))
+                    : (2 * (windowLineCounter % 8)));
             final int address = BASE_ADDER + offset + 1;
             this.tileDataHigh = Ppu.this.vRam.read(address - this.VRAM_BASE_ADDER);
-            this.mode = FetchMode.PUSH;
+            this.state = State.PUSH;
         }
 
         private void pushPixelToFIFO() {
@@ -372,7 +416,7 @@ class Ppu implements IODevice {
                     final Pixcel pixcel = new Pixcel(pixelData, 0, 0, 0);
                     fifo.offerLast(pixcel);
                 }
-                this.mode = FetchMode.GET_TILE;
+                this.state = State.GET_TILE;
             }
         }
 
@@ -398,7 +442,7 @@ class Ppu implements IODevice {
             this.scrollCounter = scrollCounter % 8;
         }
 
-        private int getPixelCounter() {
+        private int getPixelCount() {
             return pixelCounter;
         }
 
@@ -418,9 +462,8 @@ class Ppu implements IODevice {
             return this.size() <= 8;
         }
 
-        @Override
-        public void clear() {
-            super.clear();
+        public void reset() {
+            this.clear();
             this.pixelCounter = 0;
         }
     }
