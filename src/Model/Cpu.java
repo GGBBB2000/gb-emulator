@@ -235,19 +235,38 @@ class Cpu implements IODevice {
                 final int from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
                 final int to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to()));
                 final int result = from + to;
-                this.set8bitDataByParam(instInfo.to(), (byte)result);
+                this.set8bitDataByParam(instInfo.to(), (byte) result);
                 this.register.setZ((result & 0xFF) == 0);
                 this.register.setN(false);
-                this.register.setHC((((from & 0xF) + (to & 0xF)) & 0xF) == 0);
-                this.register.setFC((result >>> 8) != 0);
+                this.register.setHC((from & 0xF) + (to & 0xF) > 0xF);
+                this.register.setFC(result > 0xFF);
             }
             //case ADC -> {
             //}
-            //case SUB -> {}
-            //case SBC -> {}
+            case SUB -> {
+                final var from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())); // n
+                final var to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to())); // reg.a
+                final var result = (byte) (to - from); // reg.a - to
+                this.set8bitDataByParam(instInfo.to(), (byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(true);
+                this.register.setHC((to & 0xF) < (from & 0xF));
+                this.register.setFC(to < from); // set if no borrow
+
+            }
+            case SBC -> {
+                final var from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())) + ((this.register.getFC()) ? 1 : 0);
+                final var to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to()));
+                final byte result = (byte) (to - from);
+                this.set8bitDataByParam(instInfo.to(), result);
+                this.register.setZ(result == 0);
+                this.register.setN(true);
+                this.register.setHC((to & 0xF) < (from & 0xF));
+                this.register.setFC(to < from); // set if no borrow
+            }
             case AND -> {
                 final byte from = this.get8bitDataByParam(instInfo.from());
-                final byte result = (byte)(this.register.getA() & from);
+                final byte result = (byte) (this.register.getA() & from);
                 this.set8bitDataByParam(instInfo.to(), result);
                 this.register.setZ(result == 0);
                 this.register.setN(false);
@@ -288,7 +307,7 @@ class Cpu implements IODevice {
                 this.set8bitDataByParam(instInfo.to(), result);
                 this.register.setZ(result == 0);
                 this.register.setN(false);
-                this.register.setHC((((data & 0xF) + 1) & 0x10) == 0);
+                this.register.setHC(((data & 0xF) + 1) > 0xF);
             }
             case DEC -> {
                 final var data = this.get8bitDataByParam(instInfo.from());
@@ -296,7 +315,7 @@ class Cpu implements IODevice {
                 this.set8bitDataByParam(instInfo.to(), result);
                 this.register.setZ(result == 0);
                 this.register.setN(true);
-                this.register.setHC((data & 0xF) > 1);
+                this.register.setHC((data & 0xF) < 1);
             }
             case WADD -> { //16bit Arithmetic
                 switch (instInfo.to()) {
@@ -305,17 +324,16 @@ class Cpu implements IODevice {
                         final var to = this.get16bitDataByParam(instInfo.to());
                         final var result = (from + to) & 0xFFFF;
                         this.set16bitDataByParam(instInfo.to(), result);
-                        this.register.setHC(((((from & 0x07FF) + (to & 0x07FF))) & 0x800) != 0); // carry from bit 11
-                        this.register.setFC(((((from & 0x7FFF) + (to & 0x7FFF))) & 0x8000) != 0); // carry from bit 15
+                        this.register.setHC((from & 0x0FFF) + (to & 0x0FFF) > 0x0FFF); // carry from bit 11
+                        this.register.setFC(from + to > 0xFFFF); // carry from bit 15
                     }
                     case SP -> {
                         final int from = this.get8bitDataByParam(instInfo.from()); // read N as signed value
                         final var to = this.get16bitDataByParam(instInfo.to());
                         final var result = (from + to) & 0xFFFF;
                         this.set16bitDataByParam(instInfo.to(), result);
-                        this.register.setZ(false);
-                        this.register.setHC(((((from & 0x07FF) + (to & 0x07FF))) & 0x800) != 0); // carry from bit 11
-                        this.register.setFC(((((from & 0x7FFF) + (to & 0x7FFF))) & 0x8000) != 0); // carry from bit 15
+                        this.register.setHC((from & 0x0FFF) + (to & 0x0FFF) > 0x0FFF); // carry from bit 11
+                        this.register.setFC(from + to > 0xFFFF); // carry from bit 15
                     }
                     default -> throw new IllegalArgumentException(String.format("WADD: do not use [%s] as TO argument\n", instInfo.to()));
                 }
@@ -323,12 +341,12 @@ class Cpu implements IODevice {
             }
             case WINC -> { // 16bit INC
                 final var data = this.get16bitDataByParam(instInfo.from());
-                final int result = data + 1;
+                final int result = (data + 1) & 0xFFFF;
                 this.set16bitDataByParam(instInfo.to(), result);
             }
             case WDEC -> {
                 final var data = this.get16bitDataByParam(instInfo.from());
-                final int result = data - 1;
+                final int result = (data - 1) & 0xFFFF;
                 this.set16bitDataByParam(instInfo.to(), result);
             }
             case SWAP -> { // Miscellaneous
