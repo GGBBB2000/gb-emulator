@@ -1,5 +1,6 @@
 package Model;
 
+import Model.MBCs.Cartridge;
 import org.jetbrains.annotations.NotNull;
 
 import java.beans.PropertyChangeListener;
@@ -68,7 +69,8 @@ public class GameBoy {
             pcs.firePropertyChange("loadFailed", false, true);
             return;
         }
-        final var cart = new Cartridge();
+        final var bankNUm = Byte.toUnsignedInt(tmpRom[0x147]);
+        final var cart = Cartridge.getRom(bankNUm);
         cart.logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
         cart.title = new String(Arrays.copyOfRange(tmpRom, 0x134, 0x144));
         cart.manufactureCode = Arrays.copyOfRange(tmpRom, 0x13F, 0x143);

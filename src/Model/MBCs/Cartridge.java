@@ -1,6 +1,8 @@
-package Model;
+package Model.MBCs;
 
-final class Cartridge implements IODevice {
+import Model.IODevice;
+
+public abstract class Cartridge implements IODevice {
     public byte[] logo; // nintendo logo
     public String title;
     public byte[] manufactureCode;
@@ -18,12 +20,12 @@ final class Cartridge implements IODevice {
     public byte[] rom;
 
     @Override
-    public byte read(final int address) {
+    abstract public byte read(final int address);/* {
         return this.rom[address]; // TODO impl MBC
-    }
+    }*/
 
     @Override
-    public void write(int address, byte data) { }
+    abstract public void write(int address, byte data);
 
     @Override
     public String toString() {
@@ -46,5 +48,12 @@ final class Cartridge implements IODevice {
                 .append("headerCheckSum: ").append(String.format("%X, ", headerCheckSum))
                 .append("globalCheckSum: ").append(String.format("%X%X }", globalCheckSum[0], globalCheckSum[1]));
         return message.toString();
+    }
+
+    public static Cartridge getRom(final int bankNum) {
+        return switch (bankNum) {
+            case 0x0 -> new RomOnly();
+            default -> throw new IllegalStateException("Illegal rom bank(or not implemented) : bank number[" + bankNum + "]");
+        };
     }
 }

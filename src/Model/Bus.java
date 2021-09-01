@@ -1,5 +1,7 @@
 package Model;
 
+import Model.MBCs.Cartridge;
+
 class Bus {
     Cartridge cartridge;
     final WRam wram;
