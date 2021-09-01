@@ -1,6 +1,7 @@
 package Model;
 
 import Model.MBCs.Cartridge;
+import Model.MBCs.CartridgeInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.beans.PropertyChangeListener;
@@ -69,32 +70,47 @@ public class GameBoy {
             pcs.firePropertyChange("loadFailed", false, true);
             return;
         }
-        final var bankNUm = Byte.toUnsignedInt(tmpRom[0x147]);
-        final var cart = Cartridge.getRom(bankNUm);
-        cart.logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
-        cart.title = new String(Arrays.copyOfRange(tmpRom, 0x134, 0x144));
-        cart.manufactureCode = Arrays.copyOfRange(tmpRom, 0x13F, 0x143);
-        cart.cgbFlag = tmpRom[0x143];
-        cart.newLicenseeCode = Arrays.copyOfRange(tmpRom, 0x144, 0x146);
-        cart.sgbFlag = tmpRom[0x146];
-        cart.cartridgeType = tmpRom[0x147];
-        cart.romSize = tmpRom[0x148];
-        cart.ramSize = tmpRom[0x149];
-        cart.destinationCode = tmpRom[0x14A];
-        cart.oldLicenseeCode = tmpRom[0x14B];
-        cart.maskRomVersionNumber = tmpRom[0x14C];
-        cart.headerCheckSum = tmpRom[0x14D];
-        cart.globalCheckSum = Arrays.copyOfRange(tmpRom, 0x14E, 0x150);
+        final var logo = Arrays.copyOfRange(tmpRom, 0x104, 0x134);
+        final var title = new String(Arrays.copyOfRange(tmpRom, 0x134, 0x144)).trim();
+        final var manufactureCode = Arrays.copyOfRange(tmpRom, 0x13F, 0x143);
+        final var cgbFlag = tmpRom[0x143];
+        final var newLicenseeCode = Arrays.copyOfRange(tmpRom, 0x144, 0x146);
+        final var sgbFlag = tmpRom[0x146];
+        final var cartridgeType = tmpRom[0x147];
+        final var romSize = tmpRom[0x148];
+        final var ramSize = tmpRom[0x149];
+        final var destinationCode = tmpRom[0x14A];
+        final var oldLicenseeCode = tmpRom[0x14B];
+        final var maskRomVersionNumber = tmpRom[0x14C];
+        final var headerCheckSum = tmpRom[0x14D];
+        final var globalCheckSum = Arrays.copyOfRange(tmpRom, 0x14E, 0x150);
         byte checkSum = 0;
         for (int i = 0x134; i <= 0x14C; i++) {
             checkSum = (byte) (checkSum - tmpRom[i] - 1);
         }
-        if (checkSum != cart.headerCheckSum) {
+        if (checkSum != headerCheckSum) {
             pcs.firePropertyChange("loadFailed", false, true);
         }
-        cart.rom = tmpRom;
-        this.bus.connectCartridge(cart);
-        this.cartridge = cart;
+        final var cartridgeInfo = new CartridgeInfo(
+                logo,
+                title,
+                manufactureCode,
+                cgbFlag,
+                newLicenseeCode,
+                sgbFlag,
+                cartridgeType,
+                romSize,
+                ramSize,
+                destinationCode,
+                oldLicenseeCode,
+                maskRomVersionNumber,
+                headerCheckSum,
+                globalCheckSum,
+                tmpRom
+        );
+        final var cartridge = Cartridge.getRom(cartridgeInfo);
+        this.bus.connectCartridge(cartridge);
+        this.cartridge = cartridge;
         pcs.firePropertyChange("success", false, true);
     }
 
