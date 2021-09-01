@@ -241,8 +241,16 @@ class Cpu implements IODevice {
                 this.register.setHC((from & 0xF) + (to & 0xF) > 0xF);
                 this.register.setFC(result > 0xFF);
             }
-            //case ADC -> {
-            //}
+            case ADC -> {
+                final int from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())) + +((this.register.getFC()) ? 1 : 0);
+                final int to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to()));
+                final int result = from + to;
+                this.set8bitDataByParam(instInfo.to(), (byte) result);
+                this.register.setZ((result & 0xFF) == 0);
+                this.register.setN(false);
+                this.register.setHC((from & 0xF) + (to & 0xF) > 0xF);
+                this.register.setFC(result > 0xFF);
+            }
             case SUB -> {
                 final var from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())); // n
                 final var to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to())); // reg.a
@@ -353,14 +361,48 @@ class Cpu implements IODevice {
                 final var data = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
                 final var upper = (data & 0xF0) >> 4;
                 final var lower = data & 0x0F;
-                final var result = (byte)((lower << 4) | upper);
+                final var result = (byte) ((lower << 4) | upper);
                 this.set8bitDataByParam(instInfo.to(), result);
                 this.register.setZ(result == 0);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(false);
             }
-            // case DAA -> {}
+            case DAA -> {
+                var hexData = Byte.toUnsignedInt(this.register.getA());
+                var lowerNibble = hexData & 0xF;
+                if (this.register.getN()) {
+                    var higherNibble = (hexData & 0xF0) >> 4;
+                    if ((lowerNibble >= 0x6 && this.register.getHC()) && (higherNibble >= 0x6 && this.register.getFC())) {
+                        hexData += 0x9A;
+                        if (hexData > 0xFF) {
+                            this.register.setFC(true);
+                        }
+                    } else if (lowerNibble >= 0x6 && this.register.getHC()) {
+                        hexData += 0xFA;
+                        this.register.setFC(false);
+                    } else if (higherNibble >= 0x6 && this.register.getFC()) {
+                        hexData += 0xA0;
+                        if (hexData > 0xFF) {
+                            this.register.setFC(true);
+                        }
+                    }
+
+                } else {
+                    if (lowerNibble > 0x9 || this.register.getHC()) {
+                        hexData += 0x6;
+                    }
+                    var higherNibble = (hexData & 0xF0) >> 4;
+                    if (higherNibble > 0x9 || this.register.getFC()) {
+                        hexData += 0x60;
+                        this.register.setFC(hexData > 0xFF);
+                    }
+                }
+                this.register.setA((byte) hexData);
+                this.register.setZ(this.register.getA() == 0);
+                this.register.setHC(false);
+
+            }
             case CPL -> {
                 final var result = (byte) ((~this.register.getA()) & 0xFF);
                 this.register.setA(result);
