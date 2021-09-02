@@ -50,6 +50,8 @@ class Bus {
         } else if (address < 0xFF80) {  // I/O Registers
             if (address == 0xFF00) {
                 this.joyPad.write(address, data);
+            } else if (address == 0xFF01) {
+                System.out.println((char) data);
             } else if (address == 0xFF0F) {
                 this.interruptRegister.setInterruptRequestFlag(data);
             } else if (0xFF40 <= address && address <= 0xFF4B) {
