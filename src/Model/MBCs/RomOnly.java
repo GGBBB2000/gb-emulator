@@ -1,13 +1,21 @@
 package Model.MBCs;
 
 class RomOnly extends Cartridge {
-    @Override
-    public byte read(int address) {
-        return this.rom[address];
+
+    /*
+    32KiB ROM only
+     */
+    public RomOnly(CartridgeInfo cartridgeInfo) {
+        super(cartridgeInfo);
     }
 
     @Override
-    public void write(int address, byte data) {
+    public byte read(final int address) {
+        return this.cartridgeInfo.rom()[address];
+    }
+
+    @Override
+    public void write(final int address, byte data) {
 
     }
 }

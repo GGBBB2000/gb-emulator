@@ -67,7 +67,7 @@ class Bus {
         if (address < 0x4000) {         // ROM bank 00
             returnVal = this.cartridge.read(address);
         } else if (address < 0x8000) {  // ROM bank 01~NN
-            returnVal = this.cartridge.read(address - 0x4000);
+            returnVal = this.cartridge.read(address);
         } else if (address < 0xA000) {  // VRAM
             returnVal = this.vram.read(address - 0x8000);
         } else if (address < 0xC000) {  // External RAM

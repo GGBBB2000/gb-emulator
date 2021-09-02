@@ -111,6 +111,7 @@ public class GameBoy {
         final var cartridge = Cartridge.getRom(cartridgeInfo);
         this.bus.connectCartridge(cartridge);
         this.cartridge = cartridge;
+        System.out.println(this.cartridge);
         pcs.firePropertyChange("success", false, true);
     }
 

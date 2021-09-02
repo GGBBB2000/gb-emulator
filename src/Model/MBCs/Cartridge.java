@@ -29,7 +29,7 @@ public abstract class Cartridge implements IODevice {
                 .append(String.format("%X%X, ", info.newLicenseeCode()[0], info.newLicenseeCode()[1]))
                 .append("sgbFlag: ").append(info.sgbFlag()).append(", ")
                 .append("cartridgeType: ").append(info.cartridgeType()).append(", ")
-                .append("romSize: ").append((2 << info.romSize()) * 32 * 1024).append(", ")
+                .append("romSize: ").append((1 << info.romSize()) * 32 * 1024).append(", ")
                 .append("ramSize: ").append(info.ramSize()).append(", ")
                 .append("destinationCode: ").append(info.destinationCode()).append(", ")
                 .append("oldLicenseeCode: ").append(info.oldLicenseeCode()).append(", ")
