@@ -422,14 +422,33 @@ class Cpu implements IODevice {
             // case RLCA -> {}// Rotates & Shifts
             // case RLA -> {}
             // case RRCA -> {}
-            // case RRA -> {}
+            case RRA -> {
+                final var data = Byte.toUnsignedInt(this.register.getA());
+                final var lowBit = data & 0x1;
+                final var result = (lowBit << 7) | (data >>> 1);
+
+                this.register.setA((byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(lowBit == 1);
+            }
             // case RLC -> {}
             // case RL -> {}
             // case RRC -> {}
             // case RR -> {}
             // case SLA -> {}
             // case SRA -> {}
-            // case SRL -> {}
+            case SRL -> {
+                final var data = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
+                final var lowBit = data & 1;
+                final var result = data >>> 1;
+                this.set8bitDataByParam(instInfo.to(), (byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(lowBit == 1);
+            }
             case BIT -> { // Bit Opcodes
                 final var bitIndex = this.get8bitDataByParam(instInfo.to());
                 final var bitMask = 1 << bitIndex;
