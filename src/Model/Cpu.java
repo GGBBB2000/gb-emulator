@@ -409,8 +409,16 @@ class Cpu implements IODevice {
                 this.register.setN(true);
                 this.register.setHC(true);
             }
-            // case CCF -> {}
-            // case SCF -> {}
+            case CCF -> { // complement carry flag
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(!this.register.getFC());
+            }
+            case SCF -> { // set carry flag
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(true);
+            }
             case NOP -> {
             }
             case HALT -> {
@@ -424,9 +432,8 @@ class Cpu implements IODevice {
             // case RRCA -> {}
             case RRA -> {
                 final var data = Byte.toUnsignedInt(this.register.getA());
-                final var lowBit = data & 0x1;
+                final var lowBit = data & 1;
                 final var result = (lowBit << 7) | (data >>> 1);
-
                 this.register.setA((byte) result);
                 this.register.setZ(result == 0);
                 this.register.setN(false);
@@ -436,7 +443,16 @@ class Cpu implements IODevice {
             // case RLC -> {}
             // case RL -> {}
             // case RRC -> {}
-            // case RR -> {}
+            case RR -> {
+                final var data = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
+                final var lowBit = data & 1;
+                final var result = (lowBit << 7) | data >>> 1;
+                this.set8bitDataByParam(instInfo.to(), (byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(lowBit == 1);
+            }
             // case SLA -> {}
             // case SRA -> {}
             case SRL -> {
