@@ -427,13 +427,33 @@ class Cpu implements IODevice {
             // case STOP -> {}
             case DI -> this.imeFlag = false; // disable interrupt IME <- false
             case EI -> this.imeFlag = true; // Interrupts are enabled after instruction after EI is executed
-            // case RLCA -> {}// Rotates & Shifts
-            // case RLA -> {}
+            case RLCA -> { // Rotates & Shifts
+                final var data = this.register.getA();
+                final var bit7 = (data & 0b1000_0000) >>> 7;
+                final var result = (data << 1) | bit7;
+                this.register.setA((byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(bit7 == 1);
+            }
+            case RLA -> {
+                final var data = this.register.getA();
+                final var bit7 = (data & 0b1000_0000) >>> 7;
+                final var carryBit = (this.register.getFC()) ? 1 : 0;
+                final var result = (data << 1) | carryBit;
+                this.register.setA((byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(bit7 == 1);
+            }
             // case RRCA -> {}
             case RRA -> {
                 final var data = Byte.toUnsignedInt(this.register.getA());
                 final var lowBit = data & 1;
-                final var result = (lowBit << 7) | (data >>> 1);
+                final var carryBit = (this.register.getFC()) ? 1 : 0;
+                final var result = (carryBit << 7) | (data >>> 1);
                 this.register.setA((byte) result);
                 this.register.setZ(result == 0);
                 this.register.setN(false);
@@ -446,7 +466,8 @@ class Cpu implements IODevice {
             case RR -> {
                 final var data = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
                 final var lowBit = data & 1;
-                final var result = (lowBit << 7) | data >>> 1;
+                final var carryBit = (this.register.getFC()) ? 1 : 0;
+                final var result = (carryBit << 7) | data >>> 1;
                 this.set8bitDataByParam(instInfo.to(), (byte) result);
                 this.register.setZ(result == 0);
                 this.register.setN(false);
