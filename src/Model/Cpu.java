@@ -448,7 +448,16 @@ class Cpu implements IODevice {
                 this.register.setHC(false);
                 this.register.setFC(bit7 == 1);
             }
-            // case RRCA -> {}
+            case RRCA -> {
+                final var data = Byte.toUnsignedInt(this.register.getA());
+                final var lowBit = data & 1;
+                final var result = (lowBit << 7) | (data >>> 1);
+                this.register.setA((byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(lowBit == 1);
+            }
             case RRA -> {
                 final var data = Byte.toUnsignedInt(this.register.getA());
                 final var lowBit = data & 1;
@@ -460,7 +469,16 @@ class Cpu implements IODevice {
                 this.register.setHC(false);
                 this.register.setFC(lowBit == 1);
             }
-            // case RLC -> {}
+            case RLC -> {
+                final var data = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
+                final var bit7 = (data & 0b1000_0000) >>> 7;
+                final var result = (data << 1) | bit7;
+                this.set8bitDataByParam(instInfo.to(), (byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(bit7 == 1);
+            }
             // case RL -> {}
             // case RRC -> {}
             case RR -> {
