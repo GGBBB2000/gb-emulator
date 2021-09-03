@@ -635,7 +635,17 @@ class Cpu implements IODevice {
                  this.register.pc = address;
              }
             case RST -> {
-                final var jumpAdder = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
+                final var jumpAdder = switch (instInfo.op()) {
+                    case 0xC7 -> 0;
+                    case 0xCF -> 0x8;
+                    case 0xD7 -> 0x10;
+                    case 0xDF -> 0x18;
+                    case 0xE7 -> 0x20;
+                    case 0xEF -> 0x28;
+                    case 0xF7 -> 0x30;
+                    case 0xFF -> 0x38;
+                    default -> throw new IllegalStateException("RST invalid opcode[" + instInfo.op() + "]");
+                };
                 this.push2Byte(this.register.pc);
                 this.set16bitDataByParam(instInfo.to(), jumpAdder);
             }
