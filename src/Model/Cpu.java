@@ -510,8 +510,26 @@ class Cpu implements IODevice {
                 this.register.setHC(false);
                 this.register.setFC(lowBit == 1);
             }
-            // case SLA -> {}
-            // case SRA -> {}
+            case SLA -> {
+                final var data = this.get8bitDataByParam(instInfo.from());
+                final var signBit = data & 0b1000_0000;
+                final var result = signBit | (data << 1);
+                this.set8bitDataByParam(instInfo.to(), (byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(signBit == 0b1000_0000);
+            }
+            case SRA -> {
+                final var data = this.get8bitDataByParam(instInfo.from());
+                final var lowBit = data & 1;
+                final var result = data >> 1; // shift arithmetic
+                this.set8bitDataByParam(instInfo.to(), (byte) result);
+                this.register.setZ(result == 0);
+                this.register.setN(false);
+                this.register.setHC(false);
+                this.register.setFC(lowBit == 1);
+            }
             case SRL -> {
                 final var data = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
                 final var lowBit = data & 1;
