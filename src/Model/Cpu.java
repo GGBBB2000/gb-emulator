@@ -138,6 +138,7 @@ class Cpu implements IODevice {
             case HL -> this.register.hl;
             case INDEXED_N, NN -> param.getImmediateVal(); // 0xFFnn
             case INDEXED_SP -> param.getImmediateVal() + this.register.sp;
+            case SP -> this.register.sp;
             default -> throw new IllegalArgumentException(String.format("[%s] Invalid Argument Use 16bit argument\n", param));
         };
     }
@@ -580,10 +581,10 @@ class Cpu implements IODevice {
             case JP -> {
                 final var jumpAdder = this.get16bitDataByParam(instInfo.from());
                 this.register.pc = switch (instInfo.to()) {
-                    case CC_C -> (this.register.getFC()) ? jumpAdder : 0;
-                    case CC_NC -> (!this.register.getFC()) ? jumpAdder : 0;
-                    case CC_Z -> (this.register.getZ()) ? jumpAdder : 0;
-                    case CC_NZ -> (!this.register.getZ()) ? jumpAdder : 0;
+                    case CC_C -> (this.register.getFC()) ? jumpAdder : this.register.pc;
+                    case CC_NC -> (!this.register.getFC()) ? jumpAdder : this.register.pc;
+                    case CC_Z -> (this.register.getZ()) ? jumpAdder : this.register.pc;
+                    case CC_NZ -> (!this.register.getZ()) ? jumpAdder : this.register.pc;
                     default -> jumpAdder;
                 };
             }
