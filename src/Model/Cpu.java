@@ -252,13 +252,14 @@ class Cpu implements IODevice {
                 this.register.setFC(result > 0xFF);
             }
             case ADC -> {
-                final int from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())) + ((this.register.getFC()) ? 1 : 0);
+                final int from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
                 final int to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to()));
-                final int result = from + to;
+                final int carry = (this.register.getFC()) ? 1 : 0;
+                final int result = from + to + carry;
                 this.set8bitDataByParam(instInfo.to(), (byte) result);
                 this.register.setZ((result & 0xFF) == 0);
                 this.register.setN(false);
-                this.register.setHC((from & 0xF) + (to & 0xF) > 0xF);
+                this.register.setHC((from & 0xF) + (to & 0xF) + carry > 0xF);
                 this.register.setFC(result > 0xFF);
             }
             case SUB -> {
@@ -273,14 +274,15 @@ class Cpu implements IODevice {
 
             }
             case SBC -> {
-                final var from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())) + ((this.register.getFC()) ? 1 : 0);
+                final var from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
                 final var to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to()));
-                final byte result = (byte) (to - from);
+                final var carry = (this.register.getFC()) ? 1 : 0;
+                final byte result = (byte) (to - (from + carry));
                 this.set8bitDataByParam(instInfo.to(), result);
                 this.register.setZ(result == 0);
                 this.register.setN(true);
-                this.register.setHC((to & 0xF) < (from & 0xF));
-                this.register.setFC(to < from); // set if no borrow
+                this.register.setHC((to & 0xF) < (from & 0xF) + carry);
+                this.register.setFC(to < from + carry); // set if no borrow
             }
             case AND -> {
                 final byte from = this.get8bitDataByParam(instInfo.from());
