@@ -7,12 +7,18 @@ class Cpu implements IODevice {
     Bus bus;
     boolean imeFlag;
     boolean isHalt;
+    boolean isStopped;
 
     public Cpu(Bus bus) {
         this.register = new Register();
         this.bus = bus;
         this.imeFlag = false;
         this.isHalt = false;
+        this.isStopped = false;
+    }
+
+    public void resume() {
+        this.isStopped = false;
     }
 
     @Override
@@ -188,6 +194,9 @@ class Cpu implements IODevice {
     public int stepByInst() {
         if (this.checkInterrupt()) {
             return 4 * 5; // interrupt takes 5 machine cycle
+        }
+        if (this.isStopped) {
+            return 0;
         }
         if (this.isHalt) {
             return 4; // same as NOP
@@ -424,7 +433,12 @@ class Cpu implements IODevice {
             case HALT -> {
                 this.isHalt = true;
             }
-            // case STOP -> {}
+            case STOP -> {
+                isStopped = true;
+                final var lcdcAdder = 0xFF40;
+                final var lcdcInfo = this.read(lcdcAdder);
+                this.write(lcdcAdder, (byte) (lcdcInfo & 0b0111_1111));
+            }
             case DI -> this.imeFlag = false; // disable interrupt IME <- false
             case EI -> this.imeFlag = true; // Interrupts are enabled after instruction after EI is executed
             case RLCA -> { // Rotates & Shifts
@@ -617,19 +631,23 @@ class Cpu implements IODevice {
                     }
                     default -> throw new IllegalArgumentException(String.format("CALL: [%s] Illegal argument!\n", instInfo.to()));
                 }
-                this.register.pc = address;
+                 this.register.pc = address;
              }
-            // case RST -> {}
-             case RET -> { // Returns
-                 int address = this.register.pc;
-                 switch (instInfo.to()) {
-                     case NONE -> address = this.pop2Byte();
-                     case CC_C -> {
-                         if (this.register.getFC()) {
-                             address = this.pop2Byte();
-                         }
-                     }
-                     case CC_NC -> {
+            case RST -> {
+                final var jumpAdder = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from()));
+                this.push2Byte(this.register.pc);
+                this.set16bitDataByParam(instInfo.to(), jumpAdder);
+            }
+            case RET -> { // Returns
+                int address = this.register.pc;
+                switch (instInfo.to()) {
+                    case NONE -> address = this.pop2Byte();
+                    case CC_C -> {
+                        if (this.register.getFC()) {
+                            address = this.pop2Byte();
+                        }
+                    }
+                    case CC_NC -> {
                          if (!this.register.getFC()) {
                              address = this.pop2Byte();
                          }

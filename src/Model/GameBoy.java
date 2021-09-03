@@ -144,6 +144,7 @@ public class GameBoy {
         }
         if (key != null) {
             this.joyPad.setKeyState(key, state);
+            this.cpu.resume();
         }
     }
 }
