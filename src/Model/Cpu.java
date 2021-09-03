@@ -252,7 +252,7 @@ class Cpu implements IODevice {
                 this.register.setFC(result > 0xFF);
             }
             case ADC -> {
-                final int from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())) + +((this.register.getFC()) ? 1 : 0);
+                final int from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())) + ((this.register.getFC()) ? 1 : 0);
                 final int to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to()));
                 final int result = from + to;
                 this.set8bitDataByParam(instInfo.to(), (byte) result);
@@ -288,7 +288,7 @@ class Cpu implements IODevice {
                 this.set8bitDataByParam(instInfo.to(), result);
                 this.register.setZ(result == 0);
                 this.register.setN(false);
-                this.register.setHC(false);
+                this.register.setHC(true);
                 this.register.setFC(false);
             }
             case OR -> {
