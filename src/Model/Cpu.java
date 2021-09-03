@@ -556,7 +556,13 @@ class Cpu implements IODevice {
                 final var result = data | bitMask;
                 this.set8bitDataByParam(instInfo.from(), (byte) result);
             }
-            // case RES -> {}
+            case RES -> {
+                final var data = this.get8bitDataByParam(instInfo.from());
+                final var bitIndex = this.get8bitDataByParam(instInfo.to());
+                final var bitMask = (~(1 << bitIndex)) & 0xFF;
+                final var result = data & bitMask;
+                this.set8bitDataByParam(instInfo.from(), (byte) result);
+            }
             case JP -> {
                 final var jumpAdder = this.get16bitDataByParam(instInfo.from());
                 this.register.pc = switch (instInfo.to()) {
