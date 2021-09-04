@@ -384,7 +384,7 @@ class Cpu implements IODevice {
                 var hexData = Byte.toUnsignedInt(this.register.getA());
                 var lowerNibble = hexData & 0xF;
                 if (this.register.getN()) {
-                    var higherNibble = (hexData & 0xF0) >> 4;
+                    var higherNibble = (hexData & 0xF0) >>> 4;
                     if ((lowerNibble >= 0x6 && this.register.getHC()) && (higherNibble >= 0x6 && this.register.getFC())) {
                         hexData += 0x9A;
                         if (hexData > 0xFF) {
@@ -404,7 +404,7 @@ class Cpu implements IODevice {
                     if (lowerNibble > 0x9 || this.register.getHC()) {
                         hexData += 0x6;
                     }
-                    var higherNibble = (hexData & 0xF0) >> 4;
+                    var higherNibble = (hexData & 0xF0) >>> 4;
                     if (higherNibble > 0x9 || this.register.getFC()) {
                         hexData += 0x60;
                         this.register.setFC(hexData > 0xFF);
@@ -445,22 +445,22 @@ class Cpu implements IODevice {
             case DI -> this.imeFlag = false; // disable interrupt IME <- false
             case EI -> this.imeFlag = true; // Interrupts are enabled after instruction after EI is executed
             case RLCA -> { // Rotates & Shifts
-                final var data = this.register.getA();
+                final var data = Byte.toUnsignedInt(this.register.getA());
                 final var bit7 = (data & 0b1000_0000) >>> 7;
                 final var result = (data << 1) | bit7;
                 this.register.setA((byte) result);
-                this.register.setZ(result == 0);
+                this.register.setZ((byte) result == 0);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(bit7 == 1);
             }
             case RLA -> {
-                final var data = this.register.getA();
+                final var data = Byte.toUnsignedInt(this.register.getA());
                 final var bit7 = (data & 0b1000_0000) >>> 7;
                 final var carryBit = (this.register.getFC()) ? 1 : 0;
                 final var result = (data << 1) | carryBit;
                 this.register.setA((byte) result);
-                this.register.setZ(result == 0);
+                this.register.setZ((byte) result == 0);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(bit7 == 1);
@@ -470,7 +470,7 @@ class Cpu implements IODevice {
                 final var lowBit = data & 1;
                 final var result = (lowBit << 7) | (data >>> 1);
                 this.register.setA((byte) result);
-                this.register.setZ(result == 0);
+                this.register.setZ((byte) result == 0);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(lowBit == 1);
@@ -481,7 +481,7 @@ class Cpu implements IODevice {
                 final var carryBit = (this.register.getFC()) ? 1 : 0;
                 final var result = (carryBit << 7) | (data >>> 1);
                 this.register.setA((byte) result);
-                this.register.setZ(result == 0);
+                this.register.setZ((byte) result == 0);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(lowBit == 1);
@@ -491,7 +491,7 @@ class Cpu implements IODevice {
                 final var bit7 = (data & 0b1000_0000) >>> 7;
                 final var result = (data << 1) | bit7;
                 this.set8bitDataByParam(instInfo.to(), (byte) result);
-                this.register.setZ(result == 0);
+                this.register.setZ((byte) result == 0);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(bit7 == 1);
@@ -499,9 +499,10 @@ class Cpu implements IODevice {
             case RL -> {
                 final var data = this.get8bitDataByParam(instInfo.from());
                 final var bit7 = (data & 0b1000_0000) >>> 7;
-                final var result = (data << 1) | bit7;
+                final var carryBit = (this.register.getFC()) ? 1 : 0;
+                final var result = (data << 1) | carryBit;
                 this.set8bitDataByParam(instInfo.to(), (byte) result);
-                this.register.setZ(result == 0);
+                this.register.setZ((byte) result == 0);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(bit7 == 1);
@@ -529,13 +530,14 @@ class Cpu implements IODevice {
             }
             case SLA -> {
                 final var data = this.get8bitDataByParam(instInfo.from());
-                final var signBit = data & 0b1000_0000;
-                final var result = signBit | (data << 1);
+                final var signBit = (data & 0b1000_0000) >>> 7;
+                var result = data << 1;
+
                 this.set8bitDataByParam(instInfo.to(), (byte) result);
-                this.register.setZ(result == 0);
+                this.register.setZ((result & 0xFF) == 0);
                 this.register.setN(false);
                 this.register.setHC(false);
-                this.register.setFC(signBit == 0b1000_0000);
+                this.register.setFC(signBit == 1);
             }
             case SRA -> {
                 final var data = this.get8bitDataByParam(instInfo.from());
