@@ -449,7 +449,7 @@ class Cpu implements IODevice {
                 final var bit7 = (data & 0b1000_0000) >>> 7;
                 final var result = (data << 1) | bit7;
                 this.register.setA((byte) result);
-                this.register.setZ((byte) result == 0);
+                this.register.setZ(false);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(bit7 == 1);
@@ -460,7 +460,7 @@ class Cpu implements IODevice {
                 final var carryBit = (this.register.getFC()) ? 1 : 0;
                 final var result = (data << 1) | carryBit;
                 this.register.setA((byte) result);
-                this.register.setZ((byte) result == 0);
+                this.register.setZ(false);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(bit7 == 1);
@@ -470,7 +470,7 @@ class Cpu implements IODevice {
                 final var lowBit = data & 1;
                 final var result = (lowBit << 7) | (data >>> 1);
                 this.register.setA((byte) result);
-                this.register.setZ((byte) result == 0);
+                this.register.setZ(false);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(lowBit == 1);
@@ -481,7 +481,7 @@ class Cpu implements IODevice {
                 final var carryBit = (this.register.getFC()) ? 1 : 0;
                 final var result = (carryBit << 7) | (data >>> 1);
                 this.register.setA((byte) result);
-                this.register.setZ((byte) result == 0);
+                this.register.setZ(false);
                 this.register.setN(false);
                 this.register.setHC(false);
                 this.register.setFC(lowBit == 1);
