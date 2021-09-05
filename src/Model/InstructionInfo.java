@@ -52,6 +52,7 @@ enum Params {
 enum Instruction {
     LD,
     WLD, // For simplifying impl 16bit LD
+    LDHL,
     LDD, // same as LD A, (HL-) ... LD A, (HLD)
     LDI, // same as LD A, (HL+) ... LD A, (HLI)
     PUSH,
@@ -354,7 +355,7 @@ record InstructionInfo(int op, Instruction instruction, Params to, Params from,
             new InstructionInfo(0xF5, Instruction.PUSH, Params.SP, Params.AF, 16),
             new InstructionInfo(0xF6, Instruction.OR, Params.A, Params.N, 8),
             new InstructionInfo(0xF7, Instruction.RST, Params.PC, Params.NONE, 32),
-            new InstructionInfo(0xF8, Instruction.WLD, Params.HL, Params.INDEXED_SP, 12),
+            new InstructionInfo(0xF8, Instruction.LDHL, Params.SP, Params.N, 12),
             new InstructionInfo(0xF9, Instruction.WLD, Params.SP, Params.HL, 8),
             new InstructionInfo(0xFA, Instruction.LD, Params.A, Params.NN, 16),
             new InstructionInfo(0xFB, Instruction.EI, Params.NONE, Params.NONE, 4),

@@ -233,6 +233,16 @@ class Cpu implements IODevice {
                 final int data = this.get16bitDataByParam(instInfo.from());
                 this.set16bitDataByParam(instInfo.to(), data);
             }
+            case LDHL -> {
+                final int n = this.get8bitDataByParam(instInfo.from()); // read n as signed value
+                final int sp = this.get16bitDataByParam(instInfo.to());
+                final int result = sp + n;
+                this.set16bitDataByParam(instInfo.to(), result & 0xFFFF);
+                this.register.setZ(false);
+                this.register.setN(false);
+                this.register.setHC((sp & 0xF) + (n & 0xF) > 0xF);
+                this.register.setFC((result & 0xFFFFF) > 0xFFFF);
+            }
             case PUSH -> {
                 final int data = this.get16bitDataByParam(instInfo.from());
                 this.push2Byte(data);
@@ -424,6 +434,8 @@ class Cpu implements IODevice {
             case NOP -> {
             }
             case HALT -> {
+                this.write(0xFF0F, (byte) 0);
+                this.write(0xFFFF, (byte) 0);
                 this.isHalt = true;
             }
             case STOP -> {
