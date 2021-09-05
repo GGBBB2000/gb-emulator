@@ -120,7 +120,7 @@ class Cpu implements IODevice {
 
     private void set16bitDataByParam(Params param, int data) {
         switch (param) {
-            case AF -> this.register.af = data;
+            case AF -> this.register.af = data & 0xFFF0; // lower 4 bits of f register are always 0
             case BC -> this.register.bc = data; // LD BC, nn
             case DE -> this.register.de = data;
             case HL -> this.register.hl = data;
