@@ -144,7 +144,7 @@ class Cpu implements IODevice {
     }
 
     private boolean checkInterrupt() {
-        if (this.imeFlag) {
+        if (this.imeFlag || this.isHalt) {
             final var interruptVector = new int[]{
                     0x40, // vblank
                     0x48, // lcd stat
@@ -237,11 +237,11 @@ class Cpu implements IODevice {
                 final int n = this.get8bitDataByParam(instInfo.from()); // read n as signed value
                 final int sp = this.get16bitDataByParam(instInfo.to());
                 final int result = sp + n;
-                this.set16bitDataByParam(instInfo.to(), result & 0xFFFF);
+                this.register.hl = result & 0xFFFF;
                 this.register.setZ(false);
                 this.register.setN(false);
                 this.register.setHC((sp & 0xF) + (n & 0xF) > 0xF);
-                this.register.setFC((result & 0xFFFFF) > 0xFFFF);
+                this.register.setFC((sp & 0xFF) + (n & 0xFF) > 0xFF);
             }
             case PUSH -> {
                 final int data = this.get16bitDataByParam(instInfo.from());
@@ -364,7 +364,7 @@ class Cpu implements IODevice {
                         this.set16bitDataByParam(instInfo.to(), result);
                         this.register.setZ(false);
                         this.register.setHC((from & 0xF) + (to & 0xF) > 0xF); // carry from bit 3 ?
-                        this.register.setFC(from + to > 0xFFFF); // carry from bit 15
+                        this.register.setFC((from & 0xFF) + (to & 0xFF) > 0xFF); // carry from bit 15
                     }
                     default -> throw new IllegalArgumentException(String.format("WADD: do not use [%s] as TO argument\n", instInfo.to()));
                 }
@@ -439,10 +439,7 @@ class Cpu implements IODevice {
                 this.isHalt = true;
             }
             case STOP -> {
-                isStopped = true;
-                final var lcdcAdder = 0xFF40;
-                final var lcdcInfo = this.read(lcdcAdder);
-                this.write(lcdcAdder, (byte) (lcdcInfo & 0b0111_1111));
+                //isStopped = true;
             }
             case DI -> this.imeFlag = false; // disable interrupt IME <- false
             case EI -> this.imeFlag = true; // Interrupts are enabled after instruction after EI is executed
