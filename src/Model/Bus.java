@@ -8,15 +8,19 @@ class Bus {
     final VRam vram;
     final Ppu ppu;
     final JoyPad joyPad;
+    final DividerRegister dividerRegister;
+    final Timer timer;
     final InterruptRegister interruptRegister;
     final byte[] extVram; // 8KiB
     final byte[] attributeTable;
     final byte[] hRam;
 
-    public Bus(VRam vRam, WRam wRam, Ppu ppu, JoyPad joyPad, InterruptRegister interruptRegister) {
+    public Bus(VRam vRam, WRam wRam, Ppu ppu, JoyPad joyPad, DividerRegister dividerRegister, Timer timer, InterruptRegister interruptRegister) {
         this.wram = wRam;
         this.vram = vRam;
         this.ppu = ppu;
+        this.dividerRegister = dividerRegister;
+        this.timer = timer;
         this.interruptRegister = interruptRegister;
         this.extVram = new byte[8 * 1024]; // 16KiB
         this.attributeTable = new byte[0xA0]; // 0xFE00..0xFE9F分
@@ -52,6 +56,10 @@ class Bus {
                 this.joyPad.write(address, data);
             } else if (address == 0xFF01) {
                 System.out.println((char) data);
+            } else if (address == 0xFF04) {
+                this.dividerRegister.write(address, data);
+            } else if (address <= 0xFF07) {
+                this.timer.write(address, data);
             } else if (address == 0xFF0F) {
                 this.interruptRegister.setInterruptRequestFlag(data);
             } else if (0xFF40 <= address && address <= 0xFF4B) {
@@ -87,6 +95,10 @@ class Bus {
         } else if (address < 0xFF80) {  // I/O Registers
             if (address == 0xFF00) {
                 returnVal = this.joyPad.read(address);
+            } else if (address == 0xFF04) {
+                returnVal = this.dividerRegister.read(address);
+            } else if (address <= 0xFF07) {
+                returnVal = this.timer.read(address);
             } else if (address == 0xFF0F) {
                 returnVal = this.interruptRegister.getInterruptRequestFlag();
             } else if (0xFF40 <= address && address <= 0xFF4A) {

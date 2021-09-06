@@ -2,20 +2,22 @@ package Model;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BusTest {
     final VRam vRam = new VRam();
     final WRam wRam = new WRam();
     final JoyPad joyPad = new JoyPad();
     final Ppu ppu = new Ppu(new VRam(), new Lcd(0, 0), this.interruptRegister);
+    final DividerRegister dividerRegister = new DividerRegister();
     final InterruptRegister interruptRegister = new InterruptRegister();
-    final Bus bus = new Bus(vRam, wRam, ppu, joyPad, interruptRegister);
+    final Timer timer = new Timer(interruptRegister);
+    final Bus bus = new Bus(vRam, wRam, ppu, joyPad, dividerRegister, timer, interruptRegister);
 
     @Test
     void vramIOTest() {
         for (int addr = 0x8000; addr < 0xA000; addr++) {
-            final byte val = (byte)((addr + 1) % 128);
+            final byte val = (byte) ((addr + 1) % 128);
             bus.write(addr, val);
             assertEquals(val, bus.read(addr));
         }

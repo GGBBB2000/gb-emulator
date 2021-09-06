@@ -20,6 +20,8 @@ public class GameBoy {
     Bus bus;
     Ppu ppu;
     InterruptRegister interruptRegister;
+    DividerRegister dividerRegister;
+    Timer timer;
     VRam vRam;
     WRam wRam;
     JoyPad joyPad;
@@ -32,8 +34,10 @@ public class GameBoy {
         this.vRam = new VRam();
         this.wRam = new WRam();
         this.interruptRegister = new InterruptRegister();
+        this.dividerRegister = new DividerRegister();
+        this.timer = new Timer(this.interruptRegister);
         this.ppu = new Ppu(this.vRam, this.lcd, this.interruptRegister);
-        this.bus = new Bus(this.vRam, this.wRam, this.ppu, this.joyPad, this.interruptRegister);
+        this.bus = new Bus(this.vRam, this.wRam, this.ppu, this.joyPad, this.dividerRegister, this.timer, this.interruptRegister);
         this.cpu = new Cpu(this.bus);
         this.service = Executors.newSingleThreadScheduledExecutor();
         this.pcs = new PropertyChangeSupport(this);
@@ -123,8 +127,10 @@ public class GameBoy {
 
     public void run() {
         int cycleSum = 0;
-        while (cycleSum < 70224) {
+        while (cycleSum <= 70224) {
             final int cycle = cpu.stepByInst() * 4;
+            this.dividerRegister.addCycle(cycle);
+            this.timer.addCycle(cycle);
             ppu.run(cycle);
             cycleSum += cycle;
         }
