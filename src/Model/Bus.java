@@ -30,7 +30,7 @@ class Bus {
 
     public void write(final int address, final byte data) {
         if (address < 0x4000) {         // ROM bank 0
-            //cartridge[address] = data;
+            cartridge.write(address, data);
         } else if (address < 0x8000) {  // ROM bank 01~NN
             //cartridge[address - 0x4000] = data;
         } else if (address < 0xA000) {  // VRAM
