@@ -144,7 +144,7 @@ class Cpu implements IODevice {
     }
 
     private boolean checkInterrupt() {
-        if (this.imeFlag || this.isHalt) {
+        if (this.imeFlag) {
             final var interruptVector = new int[]{
                     0x40, // vblank
                     0x48, // lcd stat
@@ -200,6 +200,10 @@ class Cpu implements IODevice {
             return 0;
         }
         if (this.isHalt) {
+            final var hasInterrupt = read(0xFF0F) != 0;
+            if (hasInterrupt) {
+                this.isHalt = false;
+            }
             return 4; // same as NOP
         }
         final var op = readImmediateN();
@@ -434,8 +438,6 @@ class Cpu implements IODevice {
             case NOP -> {
             }
             case HALT -> {
-                this.write(0xFF0F, (byte) 0);
-                this.write(0xFFFF, (byte) 0);
                 this.isHalt = true;
             }
             case STOP -> {
