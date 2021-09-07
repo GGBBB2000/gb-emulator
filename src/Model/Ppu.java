@@ -64,7 +64,6 @@ class Ppu implements IODevice {
             this.cycleSum = 0;
             this.mode = PPU_MODE.OAM_SCAN;
             this.ly = 0;
-            this.lyc = 0;
             this.lcd.reset();
             return;
         }
@@ -98,6 +97,12 @@ class Ppu implements IODevice {
                         this.pixelFIFO.reset();
                         this.pixelFetcher.reset();
                         this.mode = PPU_MODE.H_BLANK;
+                        if (this.lcdStat.isHBLANK_InterruptMode()) {
+                            this.interruptRegister.setLCD_STAT_Interrupt(true);
+                        }
+                        if (this.lcdStat.isLYC_InterruptMode() && this.lcdStat.isEqualLyLyc()) {
+                            this.interruptRegister.setLCD_STAT_Interrupt(true);
+                        }
                     }
                 }
                 case H_BLANK -> {
@@ -107,12 +112,22 @@ class Ppu implements IODevice {
                             this.pixelFetcher.resetWindowLineCounter();
                             this.interruptRegister.setVBlankInterrupt(true);
                             this.mode = PPU_MODE.V_BLANK;
+                            if (this.lcdStat.isVBLANK_InterruptMode()) {
+                                this.interruptRegister.setLCD_STAT_Interrupt(true);
+                            }
                         } else {
                             this.pixelFetcher.incrementWindowLineCounter();
                             this.mode = PPU_MODE.OAM_SCAN;
+                            if (this.lcdStat.isOAM_InterruptMode()) {
+                                this.interruptRegister.setLCD_STAT_Interrupt(true);
+                            }
                         }
                         this.pixelFetcher.setWindowFetchingMode(false);
                         this.ly++;
+                        this.lcdStat.setEqualLyLyc(this.ly == this.lyc);
+                        if (this.lcdStat.isLYC_InterruptMode() && this.lcdStat.isEqualLyLyc()) {
+                            this.interruptRegister.setLCD_STAT_Interrupt(true);
+                        }
                     }
                     cycle = 0;
                 }
@@ -123,9 +138,13 @@ class Ppu implements IODevice {
                         this.cycleSum = 0;
                         this.ly = 0;
                         this.mode = PPU_MODE.OAM_SCAN;
+                        if (this.lcdStat.isOAM_InterruptMode()) {
+                            this.interruptRegister.setLCD_STAT_Interrupt(true);
+                        }
                     }
                 }
             }
+            this.lcdStat.setMode(this.mode);
         }
         //System.out.printf("PPU: MODE:%s cycle: %d line: %d\n", mode.toString(), this.cycle, this.line);
     }
