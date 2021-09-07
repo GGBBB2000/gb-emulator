@@ -21,9 +21,9 @@ class DividerRegister implements IODevice {
 
     void addCycle(final int cycle) {
         this.cycleSum += cycle;
-        if (this.cycleSum >= 16384) {
+        if (this.cycleSum >= 256) {
             this.counter++;
-            this.cycleSum %= 16384;
+            this.cycleSum %= 256;
             if (this.counter > 0xFF) {
                 this.counter = 0;
             }
