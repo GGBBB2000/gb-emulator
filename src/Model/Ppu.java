@@ -100,9 +100,6 @@ class Ppu implements IODevice {
                         if (this.lcdStat.isHBLANK_InterruptMode()) {
                             this.interruptRegister.setLCD_STAT_Interrupt(true);
                         }
-                        if (this.lcdStat.isLYC_InterruptMode() && this.lcdStat.isEqualLyLyc()) {
-                            this.interruptRegister.setLCD_STAT_Interrupt(true);
-                        }
                     }
                 }
                 case H_BLANK -> {
@@ -311,7 +308,8 @@ class Ppu implements IODevice {
         }
     }
 
-    private record Pixcel(byte color, int palette, int priority, int bgPriority) { }
+    private record Pixel(byte color, int palette, int priority, int bgPriority) {
+    }
 
     private class PixelFetcher {
         private State state;
@@ -430,10 +428,10 @@ class Ppu implements IODevice {
                 for (int i = 7; i >= 0; i--) {
                     final int lowBit = (this.tileDataLow >>> i) & 1;
                     final int highBit = (this.tileDataHigh >>> i) & 1;
-                    final byte colorIndex = (byte)((highBit << 1) | lowBit);
+                    final byte colorIndex = (byte) ((highBit << 1) | lowBit);
                     final byte pixelData = this.mapColorIndexToColor(colorIndex);
-                    final Pixcel pixcel = new Pixcel(pixelData, 0, 0, 0);
-                    fifo.offerLast(pixcel);
+                    final Pixel pixel = new Pixel(pixelData, 0, 0, 0);
+                    fifo.offerLast(pixel);
                 }
                 this.state = State.GET_TILE;
             }
@@ -447,7 +445,7 @@ class Ppu implements IODevice {
         }
     }
 
-    private class PixelFIFO extends ArrayDeque<Pixcel> {
+    private class PixelFIFO extends ArrayDeque<Pixel> {
         private final Lcd lcd;
         private int pixelCounter = 0;
         private int scrollCounter = 0;
@@ -466,7 +464,7 @@ class Ppu implements IODevice {
         }
 
         private void pushPixelsToLCD() {
-            Pixcel pixel = this.poll();
+            Pixel pixel = this.poll();
             if (pixel != null && this.pixelCounter < 160) {
                 if (this.scrollCounter == 0) {
                     this.lcd.draw(pixel.color);
