@@ -48,7 +48,7 @@ class Bus {
         } else if (address < 0xFE00) {  // ECHO RAM
             // prohibited
         } else if (address < 0xFEA0) {  // Sprite attribute table(OAM)
-            attributeTable[address - 0xFE00] = data;
+            ppu.write(address, data);
         } else if (address < 0xFF00) {  // Not Usable
             // do nothing
         } else if (address < 0xFF80) {  // I/O Registers
@@ -62,6 +62,8 @@ class Bus {
                 this.timer.write(address, data);
             } else if (address == 0xFF0F) {
                 this.interruptRegister.setInterruptRequestFlag(data);
+            } else if (address == 0xFF46) {
+                this.startDMATransfer(data);
             } else if (0xFF40 <= address && address <= 0xFF4B) {
                 this.ppu.write(address, data);
             }
@@ -89,7 +91,7 @@ class Bus {
         } else if (address < 0xFE00) {  // ECHO RAM
             returnVal = this.wram.read(address - 0x2000 - 0xC000);
         } else if (address < 0xFEA0) {  // Sprite attribute table(OAM)
-            returnVal = attributeTable[address - 0xFE00];
+            returnVal = this.ppu.read(address);
         } else if (address < 0xFF00) {  // Not Usable
             // do nothing
         } else if (address < 0xFF80) {  // I/O Registers
@@ -102,7 +104,7 @@ class Bus {
             } else if (address == 0xFF0F) {
                 returnVal = this.interruptRegister.getInterruptRequestFlag();
             } else if (address == 0xFF46) {
-
+                // ?
             } else if (0xFF40 <= address && address <= 0xFF4A) {
                 returnVal = this.ppu.read(address);
             }
@@ -112,5 +114,14 @@ class Bus {
             returnVal = this.interruptRegister.getInterruptEnable();
         }
         return returnVal;
+    }
+
+    void startDMATransfer(final byte addressData) {
+        final int from = (addressData & 0xFF) << 8;
+        final int to = 0xFE00;
+        for (int i = 0; i < 0xA0; i++) {
+            final byte data = this.read(from + i);
+            this.write(to + i, data);
+        }
     }
 }

@@ -19,6 +19,7 @@ class Ppu implements IODevice {
     final InterruptRegister interruptRegister;
     final PixelFetcher pixelFetcher;
     final PixelFIFO pixelFIFO;
+    final ObjectAttributeTable oamTable;
 
     PPU_MODE mode;
     VRam vRam;
@@ -46,6 +47,7 @@ class Ppu implements IODevice {
         this.lcdStat = new LcdStat();
         this.pixelFIFO = new PixelFIFO(this.lcd);
         this.pixelFetcher = new PixelFetcher();
+        this.oamTable = new ObjectAttributeTable();
         this.scy = 0;
         this.scx = 0;
         this.ly = 0;
@@ -148,6 +150,9 @@ class Ppu implements IODevice {
 
     @Override
     public byte read(final int address) {
+        if (0xFE00 <= address && address <= 0xFE9F) {
+            return this.oamTable.read(address);
+        }
         return switch (address) {
             case 0xFF40 -> this.lcdControl.getRegister();
             case 0xFF41 -> this.lcdStat.getRegister();
@@ -155,7 +160,6 @@ class Ppu implements IODevice {
             case 0xFF43 -> this.scx;
             case 0xFF44 -> this.ly;
             case 0xFF45 -> this.lyc;
-            case 0xFF46 -> (byte)0; // DMA
             case 0xFF47 -> this.bgp;
             case 0xFF48 -> this.obp0;
             case 0xFF49 -> this.obp1;
@@ -167,6 +171,10 @@ class Ppu implements IODevice {
 
     @Override
     public void write(final int address, final byte data) {
+        if (0xFE00 <= address && address <= 0xFE9F) {
+            this.oamTable.write(address, data);
+            return;
+        }
         switch (address) {
             case 0xFF40 -> this.lcdControl.setRegister(data);
             case 0xFF41 -> this.lcdStat.setRegister(data);
@@ -174,7 +182,6 @@ class Ppu implements IODevice {
             case 0xFF43 -> this.scx = data;
             case 0xFF44 -> this.ly = data;
             case 0xFF45 -> this.lyc = data;
-            case 0xFF46 -> {} // DMA
             case 0xFF47 -> this.bgp = data;
             case 0xFF48 -> this.obp0 = data;
             case 0xFF49 -> this.obp1 = data;
@@ -308,7 +315,51 @@ class Ppu implements IODevice {
         }
     }
 
-    private record Pixel(byte color, int palette, int priority, int bgPriority) {
+    /*
+     Bit7   BG and Window over OBJ (0=No, 1=BG and Window colors 1-3 over the OBJ)
+     Bit6   Y flip          (0=Normal, 1=Vertically mirrored)
+     Bit5   X flip          (0=Normal, 1=Horizontally mirrored)
+     Bit4   Palette number  **Non CGB Mode Only** (0=OBP0, 1=OBP1)
+     Bit3   Tile VRAM-Bank  **CGB Mode Only**     (0=Bank 0, 1=Bank 1)
+     Bit2-0 Palette number  **CGB Mode Only**     (OBP0-7)
+     */
+    private record ObjectAttribute(int y, int x, int tileIndex, boolean bgOverObj, boolean yFlip, boolean xFlip,
+                                   int paletteNum, int tileBank, int colorPaletteNum) {
+    }
+
+    private class ObjectAttributeTable {
+        final byte[] attributes;
+        final int BASE_ADDRESS = 0xFE00;
+
+        ObjectAttributeTable() {
+            this.attributes = new byte[40 * 4]; // 4 bytes by each sprite
+        }
+
+        private void write(int address, byte data) {
+            this.attributes[address - BASE_ADDRESS] = data;
+        }
+
+        private byte read(int address) {
+            return this.attributes[address - BASE_ADDRESS];
+        }
+
+        private ObjectAttribute at(int index) {
+            index *= 4;
+            final int y = Byte.toUnsignedInt(this.attributes[index]);
+            final int x = Byte.toUnsignedInt(this.attributes[index + 1]);
+            final int tileIndex = Byte.toUnsignedInt(this.attributes[index + 2]);
+            final int flags = Byte.toUnsignedInt(this.attributes[index + 3]);
+            final boolean bgOverObj = (flags & 0b1000_0000 >> 7) == 1;
+            final boolean yFlip = (flags & 0b0100_0000 >> 6) == 1;
+            final boolean xFlip = (flags & 0b0010_0000 >> 5) == 1;
+            final int paletteNum = flags & 0b0001_0000 >> 4;
+            final int tileBank = flags & 0b0000_1000 >> 3;
+            final int colorPaletteNum = flags & 0b11;
+            return new ObjectAttribute(y, x, tileIndex, bgOverObj, yFlip, xFlip, paletteNum, tileBank, colorPaletteNum);
+        }
+    }
+
+    private record Pixel(byte color, int palette, int priority, int bgOverObj) {
     }
 
     private class PixelFetcher {
@@ -327,6 +378,10 @@ class Ppu implements IODevice {
             GET_DATA_HIGH,
             SLEEP,
             PUSH,
+            GET_SPRITE_TILE,
+            GET_SPRITE_DATA_LOW,
+            GET_SPRITE_DATA_HIGH,
+            PUSH_SPRITE_PIXEL,
         }
 
         private PixelFetcher() {
@@ -371,6 +426,12 @@ class Ppu implements IODevice {
             }
         }
 
+        /* render sprites */
+        private void getSpriteTile() {
+
+        }
+
+        /* render background or window*/
         private void getTile() {
             int tileMapBaseAdder = 0x9800;
             if (this.isFetchingBG) {

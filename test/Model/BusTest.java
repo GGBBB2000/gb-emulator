@@ -39,4 +39,16 @@ class BusTest {
             }
         }
     }
+
+    @Test
+    void DMA_Test() {
+        for (int i = 0; i < 0xA0; i++) {
+            this.bus.write(0xC000 + i, (byte) i); // write to 0xC000~0xC09F
+        }
+        this.bus.write(0xFF46, (byte) 0xC0); // transfer 0xC000~0x009F into 0xFE00-FE9F
+        for (int i = 0; i < 0xA0; i++) {
+            final byte data = this.bus.read(0xFE00 + i);
+            assertEquals((byte) i, data);
+        }
+    }
 }
