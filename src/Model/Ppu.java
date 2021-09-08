@@ -373,19 +373,23 @@ class Ppu implements IODevice {
 
         public boolean hasSpriteAt(int x) {
             for (final var sprite : this.buffer) {
-                final var spriteFound = sprite.x() <= x;
+                final var spriteFound = sprite.x() - 8 <= x;
                 if (spriteFound) {
                     return true;
                 }
             }
-            return false; // program will not reach here!
+            return false;
         }
 
-        public ObjectAttribute getNextSprite() {
-            if (this.buffer.size() <= 0) {
-                return null;
+        public ObjectAttribute getSpriteAt(int x) {
+            for (final var sprite : this.buffer) {
+                final var spriteFound = sprite.x() - 8 <= x;
+                if (spriteFound) {
+                    return sprite;
+                }
             }
-            return this.buffer.get(this.buffer.size() - 1);
+            return null; // program will not reach here!
+
         }
 
         public void removeSprite(ObjectAttribute o) {
@@ -483,7 +487,8 @@ class Ppu implements IODevice {
 
         @Override
         void getTile() {
-            this.attribute = this.spriteBuffer.getNextSprite();
+            final var x = Ppu.this.pixelFIFO.getPixelCount();
+            this.attribute = this.spriteBuffer.getSpriteAt(x);
             assert this.attribute != null;
             this.tileNum = this.attribute.tileIndex;
             this.state = State.GET_DATA_LOW;
@@ -495,8 +500,12 @@ class Ppu implements IODevice {
             final var y = this.attribute.y;
             final var ly = Byte.toUnsignedInt(Ppu.this.ly);
             final var isOBJ_Square = Ppu.this.lcdControl.isOBJ_Square();
-            final var yOffset = ((isOBJ_Square) ? 16 : 0) - Math.abs(y - ly);
-            this.tileDataLow = ram.read(this.tileNum * 16 + 2 * yOffset);
+            final var yOffset = 16 - Math.abs(y - ly);
+            var tileNum = this.tileNum;
+            if (isOBJ_Square && yOffset >= 8) {
+                tileNum++;
+            }
+            this.tileDataLow = ram.read(tileNum * 16 + 2 * yOffset);
             this.state = State.GET_DATA_HIGH;
         }
 
@@ -506,8 +515,12 @@ class Ppu implements IODevice {
             final var y = this.attribute.y;
             final var ly = Byte.toUnsignedInt(Ppu.this.ly);
             final var isOBJ_Square = Ppu.this.lcdControl.isOBJ_Square();
-            final var yOffset = ((isOBJ_Square) ? 16 : 0) - Math.abs(y - ly);
-            this.tileDataHigh = ram.read(this.tileNum * 16 + 2 * yOffset + 1);
+            final var yOffset = 16 - Math.abs(y - ly);
+            var tileNum = this.tileNum;
+            if (isOBJ_Square && yOffset >= 8) {
+                tileNum++;
+            }
+            this.tileDataHigh = ram.read(tileNum * 16 + 2 * yOffset + 1);
             this.state = State.PUSH;
         }
 
