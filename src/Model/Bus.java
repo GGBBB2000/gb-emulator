@@ -101,6 +101,8 @@ class Bus {
                 returnVal = this.timer.read(address);
             } else if (address == 0xFF0F) {
                 returnVal = this.interruptRegister.getInterruptRequestFlag();
+            } else if (address == 0xFF46) {
+
             } else if (0xFF40 <= address && address <= 0xFF4A) {
                 returnVal = this.ppu.read(address);
             }
@@ -110,9 +112,5 @@ class Bus {
             returnVal = this.interruptRegister.getInterruptEnable();
         }
         return returnVal;
-    }
-
-    public byte[] getAttributeTable() {
-        return attributeTable;
     }
 }
