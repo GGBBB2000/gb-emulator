@@ -18,7 +18,8 @@ class Ppu implements IODevice {
     // 0xFF68 BCPS/BGPI (Background Color Palette Specification or Background Palette Index)
     // 0xFF69 BCPS/BGPI (Background Color Palette Data or Background Palette Data)
     final InterruptRegister interruptRegister;
-    final BG_Fetcher BGFetcher;
+    final BG_Fetcher bgFetcher;
+    final SpriteFetcher spriteFetcher;
     final PixelFIFO pixelFIFO;
     final ObjectAttributeTable oamTable;
     final SpriteBuffer spriteBuffer;
@@ -48,9 +49,10 @@ class Ppu implements IODevice {
         this.lcdControl = new LcdControl();
         this.lcdStat = new LcdStat();
         this.pixelFIFO = new PixelFIFO(this.lcd);
-        this.BGFetcher = new BG_Fetcher();
+        this.bgFetcher = new BG_Fetcher();
         this.oamTable = new ObjectAttributeTable();
         this.spriteBuffer = new SpriteBuffer(this.oamTable);
+        this.spriteFetcher = new SpriteFetcher(this.spriteBuffer);
         this.scy = 0;
         this.scx = 0;
         this.ly = 0;
@@ -88,21 +90,25 @@ class Ppu implements IODevice {
                 }
                 case DRAWING -> { // DRAWING takes 43-72 T-cycles
                     cycle -= 2;
-                    this.BGFetcher.step();
-                    this.pixelFIFO.pushPixelsToLCD();
-                    this.pixelFIFO.pushPixelsToLCD();
                     final var pixelCount = this.pixelFIFO.getPixelCount();
-                    final var wx = Byte.toUnsignedInt(this.wx);
-                    final var wy = Byte.toUnsignedInt(this.wy);
-                    final var ly = Byte.toUnsignedInt(this.ly);
-                    if (this.lcdControl.getWindowEnable() && (wx - 7) <= pixelCount && wy <= ly && BGFetcher.isFetchingBG()) {
-                        this.pixelFIFO.clear();
-                        this.BGFetcher.reset();
-                        this.BGFetcher.setWindowFetchingMode(true);
+                    if (this.lcdControl.isOBJEnable() && this.spriteBuffer.hasSprite() && this.spriteBuffer.hasSpriteAt(pixelCount)) {
+                        this.spriteFetcher.step();
+                    } else {
+                        this.bgFetcher.step();
+                        this.pixelFIFO.pushPixelsToLCD();
+                        this.pixelFIFO.pushPixelsToLCD();
+                        final var wx = Byte.toUnsignedInt(this.wx);
+                        final var wy = Byte.toUnsignedInt(this.wy);
+                        final var ly = Byte.toUnsignedInt(this.ly);
+                        if (this.lcdControl.getWindowEnable() && (wx - 7) <= pixelCount && wy <= ly && bgFetcher.isFetchingBG()) {
+                            this.pixelFIFO.clear();
+                            this.bgFetcher.reset();
+                            this.bgFetcher.setWindowFetchingMode(true);
+                        }
                     }
                     if (pixelCount >= 160) {
                         this.pixelFIFO.reset();
-                        this.BGFetcher.reset();
+                        this.bgFetcher.reset();
                         this.spriteBuffer.reset();
                         this.mode = PPU_MODE.H_BLANK;
                         if (this.lcdStat.isHBLANK_InterruptMode()) {
@@ -114,20 +120,20 @@ class Ppu implements IODevice {
                     final int currentLine = Byte.toUnsignedInt(this.ly);
                     if (this.cycleSum / lineCycle > currentLine) {
                         if (currentLine == 143) {
-                            this.BGFetcher.resetWindowLineCounter();
+                            this.bgFetcher.resetWindowLineCounter();
                             this.interruptRegister.setVBlankInterrupt(true);
                             this.mode = PPU_MODE.V_BLANK;
                             if (this.lcdStat.isVBLANK_InterruptMode()) {
                                 this.interruptRegister.setLCD_STAT_Interrupt(true);
                             }
                         } else {
-                            this.BGFetcher.incrementWindowLineCounter();
+                            this.bgFetcher.incrementWindowLineCounter();
                             this.mode = PPU_MODE.OAM_SCAN;
                             if (this.lcdStat.isOAM_InterruptMode()) {
                                 this.interruptRegister.setLCD_STAT_Interrupt(true);
                             }
                         }
-                        this.BGFetcher.setWindowFetchingMode(false);
+                        this.bgFetcher.setWindowFetchingMode(false);
                         this.ly++;
                         this.lcdStat.setEqualLyLyc(this.ly == this.lyc);
                         if (this.lcdStat.isLYC_InterruptMode() && this.lcdStat.isEqualLyLyc()) {
@@ -151,7 +157,7 @@ class Ppu implements IODevice {
             }
             this.lcdStat.setMode(this.mode);
         }
-        System.out.printf("PPU: MODE:%s \n", mode.toString());
+        //System.out.printf("PPU: MODE:%s \n", mode.toString());
     }
 
     @Override
@@ -360,6 +366,31 @@ class Ppu implements IODevice {
             }
             tableIndex++;
         }
+
+        public boolean hasSprite() {
+            return this.buffer.size() > 0;
+        }
+
+        public boolean hasSpriteAt(int x) {
+            for (final var sprite : this.buffer) {
+                final var spriteFound = sprite.x() <= x;
+                if (spriteFound) {
+                    return true;
+                }
+            }
+            return false; // program will not reach here!
+        }
+
+        public ObjectAttribute getNextSprite() {
+            if (this.buffer.size() <= 0) {
+                return null;
+            }
+            return this.buffer.get(this.buffer.size() - 1);
+        }
+
+        public void removeSprite(ObjectAttribute o) {
+            this.buffer.remove(o);
+        }
     }
 
     private class ObjectAttributeTable {
@@ -394,7 +425,7 @@ class Ppu implements IODevice {
         }
     }
 
-    private record Pixel(byte color, int palette, int priority, int bgOverObj) {
+    private record Pixel(byte color, int palette, int priority, boolean bgOverObj) {
     }
 
     private abstract class PixelFetcher {
@@ -437,37 +468,72 @@ class Ppu implements IODevice {
     }
 
     private class SpriteFetcher extends PixelFetcher {
+        final SpriteBuffer spriteBuffer;
+        ObjectAttribute attribute;
+
+        SpriteFetcher(SpriteBuffer spriteBuffer) {
+            this.spriteBuffer = spriteBuffer;
+            reset();
+        }
 
         @Override
         void reset() {
             this.state = State.GET_TILE;
-            this.tileDataHigh = 0;
-            this.tileDataLow = 0;
         }
 
         @Override
         void getTile() {
-
+            this.attribute = this.spriteBuffer.getNextSprite();
+            assert this.attribute != null;
+            this.tileNum = this.attribute.tileIndex;
+            this.state = State.GET_DATA_LOW;
         }
 
         @Override
         void getTileLow() {
-
+            final var ram = Ppu.this.vRam;
+            final var y = this.attribute.y;
+            final var ly = Byte.toUnsignedInt(Ppu.this.ly);
+            final var isOBJ_Square = Ppu.this.lcdControl.isOBJ_Square();
+            final var yOffset = ((isOBJ_Square) ? 16 : 0) - Math.abs(y - ly);
+            this.tileDataLow = ram.read(this.tileNum * 16 + 2 * yOffset);
+            this.state = State.GET_DATA_HIGH;
         }
 
         @Override
         void getTileHigh() {
-
+            final var ram = Ppu.this.vRam;
+            final var y = this.attribute.y;
+            final var ly = Byte.toUnsignedInt(Ppu.this.ly);
+            final var isOBJ_Square = Ppu.this.lcdControl.isOBJ_Square();
+            final var yOffset = ((isOBJ_Square) ? 16 : 0) - Math.abs(y - ly);
+            this.tileDataHigh = ram.read(this.tileNum * 16 + 2 * yOffset + 1);
+            this.state = State.PUSH;
         }
 
         @Override
         void pushPixelToFIFO() {
-
+            final var fifo = Ppu.this.pixelFIFO;
+            final var pixels = new ArrayList<Pixel>();
+            for (int i = 7; i >= 0; i--) {
+                final int lowBit = (this.tileDataLow >>> i) & 1;
+                final int highBit = (this.tileDataHigh >>> i) & 1;
+                final byte colorIndex = (byte) ((highBit << 1) | lowBit);
+                final byte pixelData = this.mapColorIndexToColor(colorIndex);
+                final Pixel pixel = new Pixel(pixelData, 0, 0, attribute.bgOverObj);
+                pixels.add(pixel);
+            }
+            fifo.setSpritePixelBuffer(pixels);
+            this.spriteBuffer.removeSprite(this.attribute);
+            this.state = State.GET_TILE;
         }
 
         @Override
         byte mapColorIndexToColor(byte index) {
-            return 0;
+            final byte[] colorArray = {(byte) 255, (byte) 200, (byte) 100, (byte) 0};
+            final byte palette = (this.attribute.paletteNum == 0) ? Ppu.this.obp0 : Ppu.this.obp1;
+            final int paletteIndex = ((palette >> 2 * index) & 0b0011);
+            return colorArray[paletteIndex];
         }
     }
 
@@ -506,18 +572,6 @@ class Ppu implements IODevice {
 
         public void setWindowFetchingMode(boolean isFetchingWin) {
             this.isFetchingBG = !isFetchingWin;
-        }
-
-        @Override
-        public void step() {
-            switch (this.state) {
-                case GET_TILE -> this.getTile();
-                case GET_DATA_LOW -> this.getTileLow();
-                case GET_DATA_HIGH -> this.getTileHigh();
-                case PUSH -> this.pushPixelToFIFO();
-                case SLEEP -> {
-                }
-            }
         }
 
         /* render background or window*/
@@ -584,7 +638,7 @@ class Ppu implements IODevice {
                     final int highBit = (this.tileDataHigh >>> i) & 1;
                     final byte colorIndex = (byte) ((highBit << 1) | lowBit);
                     final byte pixelData = this.mapColorIndexToColor(colorIndex);
-                    final Pixel pixel = new Pixel(pixelData, 0, 0, 0);
+                    final Pixel pixel = new Pixel(pixelData, 0, 0, false);
                     fifo.offerLast(pixel);
                 }
                 this.state = State.GET_TILE;
@@ -604,10 +658,15 @@ class Ppu implements IODevice {
         private final Lcd lcd;
         private int pixelCounter = 0;
         private int scrollCounter = 0;
+        private final ArrayList<Pixel> spritePixelBuffer;
 
         private PixelFIFO(final Lcd lcd) {
             super(16); // FIFO has 16 pixel data
             this.lcd = lcd;
+            this.spritePixelBuffer = new ArrayList<>();
+            for (int i = 0; i < 8; i++) {
+                this.spritePixelBuffer.add(null);
+            }
         }
 
         public void setScrollCounter(int scrollCounter) {
@@ -618,10 +677,29 @@ class Ppu implements IODevice {
             return pixelCounter;
         }
 
+        private void setSpritePixelBuffer(ArrayList<Pixel> spritePixels) {
+            assert spritePixels.size() == 8;
+            for (int i = 0; i < 8; i++) {
+                final var newPixel = spritePixels.get(i);
+                final var oldPixel = this.spritePixelBuffer.get(i);
+                if (oldPixel == null) {
+                    this.spritePixelBuffer.set(i, newPixel);
+                } else if (oldPixel.color == 0 && newPixel.color != 0) {
+                    this.spritePixelBuffer.set(i, newPixel);
+                }
+            }
+        }
+
         private void pushPixelsToLCD() {
             Pixel pixel = this.poll();
             if (pixel != null && this.pixelCounter < 160) {
                 if (this.scrollCounter == 0) {
+                    final var spritePixel = this.spritePixelBuffer.get(0);
+                    if (spritePixel != null && !spritePixel.bgOverObj) {
+                        pixel = spritePixel;
+                        this.spritePixelBuffer.remove(0);
+                        this.spritePixelBuffer.add(null);
+                    }
                     this.lcd.draw(pixel.color);
                     this.pixelCounter++;
                 } else {
