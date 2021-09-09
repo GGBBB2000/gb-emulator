@@ -2,6 +2,7 @@ package Model;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 
 class Ppu implements IODevice {
     final LcdControl lcdControl;
@@ -536,6 +537,9 @@ class Ppu implements IODevice {
                 final Pixel pixel = new Pixel(pixelData, 0, 0, attribute.bgOverObj);
                 pixels.add(pixel);
             }
+            if (this.attribute.xFlip) {
+                Collections.reverse(pixels);
+            }
             fifo.setSpritePixelBuffer(pixels);
             this.spriteBuffer.removeSprite(this.attribute);
             this.state = State.GET_TILE;
@@ -708,8 +712,18 @@ class Ppu implements IODevice {
             if (pixel != null && this.pixelCounter < 160) {
                 if (this.scrollCounter == 0) {
                     final var spritePixel = this.spritePixelBuffer.get(0);
-                    if (spritePixel != null && !spritePixel.bgOverObj) {
-                        pixel = spritePixel;
+                    if (spritePixel != null) {
+                        if (spritePixel.bgOverObj) { // スプライトが背景の下にある時
+                            if (pixel.color == 0 && spritePixel.color != (byte) 255) {
+                                // 背景色が黒で，スプライトが透過色でなければスプライトを描画
+                                pixel = spritePixel;
+                            }
+                        } else {
+                            if (spritePixel.color != (byte) 255) {
+                                // スプライトが透過色でなければスプライトを描画
+                                pixel = spritePixel;
+                            }
+                        }
                         this.spritePixelBuffer.remove(0);
                         this.spritePixelBuffer.add(null);
                     }
