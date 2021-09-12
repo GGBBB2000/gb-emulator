@@ -15,6 +15,17 @@ public abstract class Cartridge implements IODevice {
     @Override
     abstract public void write(int address, byte data);
 
+    int getRamSize(long ramNumber) {
+        int num = (int) (ramNumber & 0b111);
+        return switch (num) {
+            case 0x2 -> 8 * 1024;
+            case 0x3 -> 32 * 1024;
+            case 0x4 -> 128 * 1024;
+            case 0x5 -> 64 * 1024;
+            default -> 0;
+        };
+    }
+
     @Override
     public String toString() {
         final var info = this.cartridgeInfo;
@@ -43,7 +54,8 @@ public abstract class Cartridge implements IODevice {
         final var bankNum = Byte.toUnsignedInt(cartridgeInfo.cartridgeType());
         return switch (bankNum) {
             case 0x0 -> new RomOnly(cartridgeInfo);
-            case 0x1 -> new Mbc1(cartridgeInfo);
+            case 0x1, 0x2, 0x3 -> new Mbc1(cartridgeInfo);
+            case 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E -> new Mbc5(cartridgeInfo);
             default -> throw new IllegalStateException("Illegal rom bank(or not implemented) : bank number[" + bankNum + "]");
         };
     }
