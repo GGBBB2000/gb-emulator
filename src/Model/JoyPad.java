@@ -23,11 +23,13 @@ public class JoyPad implements IODevice {
     int directionKeyState; // ↓ ↑ ← → 0: pressed 1: released
     int actionKeyState; // Start Select B A  0: pressed 1:released
     Mode mode;
+    final InterruptRegister interruptRegister;
 
-    JoyPad() {
+    JoyPad(InterruptRegister interruptRegister) {
         this.mode = Mode.None;
         this.actionKeyState = 0b0000_1111;
         this.directionKeyState = 0b0000_1111;
+        this.interruptRegister = interruptRegister;
     }
 
     @Override
@@ -74,6 +76,7 @@ public class JoyPad implements IODevice {
                 } else {
                     keyMask = (~keyMask) & 0b1111;
                     this.actionKeyState &= keyMask;
+                    this.interruptRegister.setJoyPadInterrupt(true);
                 }
             }
             case DOWN, UP, LEFT, RIGHT -> {
@@ -82,6 +85,7 @@ public class JoyPad implements IODevice {
                 } else {
                     keyMask = (~keyMask) & 0b1111;
                     this.directionKeyState &= keyMask;
+                    this.interruptRegister.setJoyPadInterrupt(true);
                 }
             }
         }

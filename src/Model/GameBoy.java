@@ -30,10 +30,10 @@ public class GameBoy {
 
     public GameBoy() {
         this.lcd = new Lcd(160, 144);
-        this.joyPad = new JoyPad();
         this.vRam = new VRam();
         this.wRam = new WRam();
         this.interruptRegister = new InterruptRegister();
+        this.joyPad = new JoyPad(this.interruptRegister);
         this.dividerRegister = new DividerRegister();
         this.timer = new Timer(this.interruptRegister);
         this.ppu = new Ppu(this.vRam, this.lcd, this.interruptRegister);
@@ -150,7 +150,6 @@ public class GameBoy {
         }
         if (key != null) {
             this.joyPad.setKeyState(key, state);
-            this.cpu.resume();
         }
     }
 }

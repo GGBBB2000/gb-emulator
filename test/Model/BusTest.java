@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class BusTest {
     final VRam vRam = new VRam();
     final WRam wRam = new WRam();
-    final JoyPad joyPad = new JoyPad();
     final Ppu ppu = new Ppu(new VRam(), new Lcd(0, 0), this.interruptRegister);
     final DividerRegister dividerRegister = new DividerRegister();
     final InterruptRegister interruptRegister = new InterruptRegister();
+    final JoyPad joyPad = new JoyPad(interruptRegister);
     final Timer timer = new Timer(interruptRegister);
     final Bus bus = new Bus(vRam, wRam, ppu, joyPad, dividerRegister, timer, interruptRegister);
 
