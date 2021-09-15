@@ -68,13 +68,6 @@ class Ppu implements IODevice {
     }
 
     public void run(int cycle) {
-        if (!this.lcdControl.isLCDEnable()) {
-            this.cycleSum = 0;
-            this.mode = PPU_MODE.OAM_SCAN;
-            this.ly = 0;
-            this.lcd.reset();
-            return;
-        }
         final var lineCycle = 456; // sum of cycle to render a line
         this.cycleSum += cycle;
         while (cycle > 0) {
@@ -112,7 +105,7 @@ class Ppu implements IODevice {
                         this.bgFetcher.reset();
                         this.spriteBuffer.reset();
                         this.mode = PPU_MODE.H_BLANK;
-                        if (this.lcdStat.isHBLANK_InterruptMode()) {
+                        if (this.lcdControl.isLCDEnable() && this.lcdStat.isHBLANK_InterruptMode()) {
                             this.interruptRegister.setLCD_STAT_Interrupt(true);
                         }
                     }
@@ -124,20 +117,20 @@ class Ppu implements IODevice {
                             this.bgFetcher.resetWindowLineCounter();
                             this.interruptRegister.setVBlankInterrupt(true);
                             this.mode = PPU_MODE.V_BLANK;
-                            if (this.lcdStat.isVBLANK_InterruptMode()) {
+                            if (this.lcdControl.isLCDEnable() && this.lcdStat.isVBLANK_InterruptMode()) {
                                 this.interruptRegister.setLCD_STAT_Interrupt(true);
                             }
                         } else {
                             this.bgFetcher.incrementWindowLineCounter();
                             this.mode = PPU_MODE.OAM_SCAN;
-                            if (this.lcdStat.isOAM_InterruptMode()) {
+                            if (this.lcdControl.isLCDEnable() && this.lcdStat.isOAM_InterruptMode()) {
                                 this.interruptRegister.setLCD_STAT_Interrupt(true);
                             }
                         }
                         this.bgFetcher.setWindowFetchingMode(false);
                         this.ly++;
                         this.lcdStat.setEqualLyLyc(this.ly == this.lyc);
-                        if (this.lcdStat.isLYC_InterruptMode() && this.lcdStat.isEqualLyLyc()) {
+                        if (this.lcdControl.isLCDEnable() && this.lcdStat.isLYC_InterruptMode() && this.lcdStat.isEqualLyLyc()) {
                             this.interruptRegister.setLCD_STAT_Interrupt(true);
                         }
                     }
@@ -727,7 +720,11 @@ class Ppu implements IODevice {
                         this.spritePixelBuffer.remove(0);
                         this.spritePixelBuffer.add(null);
                     }
-                    this.lcd.draw(pixel.color);
+                    if (Ppu.this.lcdControl.isLCDEnable()) {
+                        this.lcd.draw(pixel.color);
+                    } else { // lcdがオフなら何も表示しない
+                        this.lcd.draw((byte) 255);
+                    }
                     this.pixelCounter++;
                 } else {
                     this.scrollCounter--;
