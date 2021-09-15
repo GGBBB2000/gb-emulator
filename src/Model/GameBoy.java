@@ -14,19 +14,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class GameBoy {
-    PropertyChangeSupport pcs;
-    ScheduledExecutorService service;
-    Cpu cpu;
-    Bus bus;
-    Ppu ppu;
-    InterruptRegister interruptRegister;
-    DividerRegister dividerRegister;
-    Timer timer;
-    VRam vRam;
-    WRam wRam;
-    JoyPad joyPad;
+    final PropertyChangeSupport pcs;
+    final ScheduledExecutorService service;
+    final Cpu cpu;
+    final Bus bus;
+    final Ppu ppu;
+    final InterruptRegister interruptRegister;
+    final DividerRegister dividerRegister;
+    final Timer timer;
+    final VRam vRam;
+    final WRam wRam;
+    final JoyPad joyPad;
+    final Lcd lcd;
+
     Cartridge cartridge;
-    Lcd lcd;
 
     public GameBoy() {
         this.lcd = new Lcd(160, 144);

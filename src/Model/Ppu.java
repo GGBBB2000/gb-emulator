@@ -25,9 +25,10 @@ class Ppu implements IODevice {
     final ObjectAttributeTable oamTable;
     final SpriteBuffer spriteBuffer;
 
+    final VRam vRam;
+    final Lcd lcd;
+
     PPU_MODE mode;
-    VRam vRam;
-    Lcd lcd;
 
     int cycleSum;
 
@@ -197,7 +198,7 @@ class Ppu implements IODevice {
         }
     }
 
-    private final class LcdControl { // 0xFF40 LCDC (LCD Control)
+    private static final class LcdControl { // 0xFF40 LCDC (LCD Control)
         /*
         bit7: LCD/PPU enable 0=off 1=on
         bit6: Window tile map area 0=9800-9BFF 1=9C00-9FFF
@@ -209,11 +210,7 @@ class Ppu implements IODevice {
         bit0: BG and Window enable/priority 0=off 1=on
         */
 
-        byte register;
-
-        LcdControl() {
-            this.register = (byte)0b1000_0000;
-        }
+        byte register = (byte)0b1000_0000;
 
         void setRegister(byte register) {
             this.register = register;
@@ -391,7 +388,7 @@ class Ppu implements IODevice {
         }
     }
 
-    private class ObjectAttributeTable {
+    private static class ObjectAttributeTable {
         final byte[] attributes;
         final int BASE_ADDRESS = 0xFE00;
 
@@ -426,7 +423,7 @@ class Ppu implements IODevice {
     private record Pixel(byte color, int palette, int priority, boolean bgOverObj) {
     }
 
-    private abstract class PixelFetcher {
+    private abstract static class PixelFetcher {
         State state;
         int tileNum;
         byte tileDataLow;
@@ -520,7 +517,6 @@ class Ppu implements IODevice {
 
         @Override
         void pushPixelToFIFO() {
-            final var fifo = Ppu.this.pixelFIFO;
             final var pixels = new ArrayList<Pixel>();
             for (int i = 7; i >= 0; i--) {
                 final int lowBit = (this.tileDataLow >>> i) & 1;
@@ -533,7 +529,7 @@ class Ppu implements IODevice {
             if (this.attribute.xFlip) {
                 Collections.reverse(pixels);
             }
-            fifo.setSpritePixelBuffer(pixels);
+            Ppu.this.pixelFIFO.setSpritePixelBuffer(pixels);
             this.spriteBuffer.removeSprite(this.attribute);
             this.state = State.GET_TILE;
         }

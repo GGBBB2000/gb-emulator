@@ -54,21 +54,13 @@ public class JoyPad implements IODevice {
     }
 
     public void setKeyState(final KeyInput key, final boolean pressed) {
-        int keyMask = 0b1111;
-        switch (key) {
-            case START, DOWN -> {
-                keyMask = 0b1000;
-            }
-            case SELECT, UP -> {
-                keyMask = 0b0100;
-            }
-            case B, LEFT -> {
-                keyMask = 0b0010;
-            }
-            case A, RIGHT -> {
-                keyMask = 0b0001;
-            }
-        }
+        int keyMask = switch (key) {
+            case START, DOWN -> 0b1000;
+            case SELECT, UP -> 0b0100;
+            case B, LEFT -> 0b0010;
+            case A, RIGHT -> 0b0001;
+            default -> 0b1111;
+        };
         switch (key) {
             case START, SELECT, B, A -> {
                 if (!pressed) {
