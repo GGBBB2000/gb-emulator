@@ -2,7 +2,6 @@ package Model;
 
 import Model.MBCs.Cartridge;
 import Model.MBCs.CartridgeInfo;
-import org.jetbrains.annotations.NotNull;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -66,7 +65,7 @@ public class GameBoy {
         pcs.removePropertyChangeListener(propertyChangeListener);
     }
 
-    public void loadCartridge(@NotNull final String filePath) {
+    public void loadCartridge(final String filePath) {
         byte[] tmpRom;
         try {
             tmpRom = Files.readAllBytes(Path.of(filePath));
