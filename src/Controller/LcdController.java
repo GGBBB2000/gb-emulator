@@ -6,15 +6,7 @@ import View.MainGameView;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 
-class LcdController implements PropertyChangeListener {
-    final MainGameView view;
-    final GameBoy model;
-
-    public LcdController(MainGameView view, GameBoy model) {
-        this.view = view;
-        this.model = model;
-    }
-
+record LcdController(MainGameView view, GameBoy model) implements PropertyChangeListener {
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         final var lcdData = model.getLcd();

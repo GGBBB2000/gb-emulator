@@ -6,15 +6,7 @@ import View.MainGameView;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
-public class JoyPadInputListener implements KeyListener {
-    final MainGameView view;
-    final GameBoy model;
-
-    JoyPadInputListener(MainGameView view, GameBoy model) {
-        this.view = view;
-        this.model = model;
-    }
-
+public record JoyPadInputListener(MainGameView view, GameBoy model) implements KeyListener {
     @Override
     public void keyTyped(KeyEvent e) {
     }

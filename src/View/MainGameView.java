@@ -3,9 +3,9 @@ package View;
 import javax.swing.*;
 
 public class MainGameView extends JFrame {
-    JPanel jPanel;
-    JMenuBar menuBar;
-    Screen lcd;
+    final JPanel jPanel;
+    final JMenuBar menuBar;
+    final Screen lcd;
 
     public MainGameView() {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

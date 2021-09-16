@@ -3,8 +3,8 @@ package Model;
 import jdk.jshell.spi.ExecutionControl;
 
 class Cpu implements IODevice {
-    Register register;
-    Bus bus;
+    final Register register;
+    final Bus bus;
     boolean imeFlag;
     boolean isHalt;
     boolean isStopped;
@@ -280,7 +280,7 @@ class Cpu implements IODevice {
                 final var from = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.from())); // n
                 final var to = Byte.toUnsignedInt(this.get8bitDataByParam(instInfo.to())); // reg.a
                 final var result = (byte) (to - from); // reg.a - to
-                this.set8bitDataByParam(instInfo.to(), (byte) result);
+                this.set8bitDataByParam(instInfo.to(), result);
                 this.register.setZ(result == 0);
                 this.register.setN(true);
                 this.register.setHC((to & 0xF) < (from & 0xF));

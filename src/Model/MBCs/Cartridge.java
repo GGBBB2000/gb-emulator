@@ -3,7 +3,7 @@ package Model.MBCs;
 import Model.IODevice;
 
 public abstract class Cartridge implements IODevice {
-    CartridgeInfo cartridgeInfo;
+    final CartridgeInfo cartridgeInfo;
 
     public Cartridge(final CartridgeInfo cartridgeInfo) {
         this.cartridgeInfo = cartridgeInfo;
