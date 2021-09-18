@@ -1,29 +1,29 @@
 package View;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JPanel;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.awt.image.Raster;
 
 public class Screen extends JPanel {
     final BufferedImage imageBuffer;
-    final Graphics2D g2d;
 
     public Screen(final int width, final int height) {
         this.imageBuffer = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
-        g2d = this.imageBuffer.createGraphics();
         this.setPreferredSize(new Dimension(width, height));
         repaint();
     }
 
     public void setLcdData (byte[] out) {
-        this.imageBuffer.setData(Raster.createRaster(this.imageBuffer.getSampleModel(), new DataBufferByte(out, out.length), new Point()));
+        final var buffer = (DataBufferByte)this.imageBuffer.getRaster().getDataBuffer();
+        for(int i = 0; i < buffer.getSize(); i++) buffer.setElem(i, out[i]);
         repaint();
     }
 
     @Override
-    public void paint(Graphics g) {
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
         g.drawImage(this.imageBuffer, 0, 0, null);
     }
 }
