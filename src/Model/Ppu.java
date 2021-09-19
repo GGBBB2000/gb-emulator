@@ -664,15 +664,13 @@ class Ppu implements IODevice {
         private final Lcd lcd;
         private int pixelCounter = 0;
         private int scrollCounter = 0;
-        private final ArrayList<Pixel> spritePixelBuffer;
+        private final Pixel[] spritePixelBuffer;
+        private int spBufferHead = 0;
 
         private PixelFIFO(final Lcd lcd) {
             super(16); // FIFO has 16 pixel data
             this.lcd = lcd;
-            this.spritePixelBuffer = new ArrayList<>();
-            for (int i = 0; i < 8; i++) {
-                this.spritePixelBuffer.add(null);
-            }
+            this.spritePixelBuffer = new Pixel[8];
         }
 
         public void setScrollCounter(int scrollCounter) {
@@ -687,11 +685,11 @@ class Ppu implements IODevice {
             assert spritePixels.size() == 8;
             for (int i = 0; i < 8; i++) {
                 final var newPixel = spritePixels.get(i);
-                final var oldPixel = this.spritePixelBuffer.get(i);
+                final var oldPixel = this.spritePixelBuffer[(spBufferHead + i) % 8];
                 if (oldPixel == null) {
-                    this.spritePixelBuffer.set(i, newPixel);
+                    this.spritePixelBuffer[(spBufferHead + i) % 8] = newPixel;
                 } else if (oldPixel.color == 0 && newPixel.color != 0) {
-                    this.spritePixelBuffer.set(i, newPixel);
+                    this.spritePixelBuffer[(spBufferHead + i) % 8] = newPixel;
                 }
             }
         }
@@ -700,8 +698,10 @@ class Ppu implements IODevice {
             Pixel pixel = this.poll();
             if (pixel != null && this.pixelCounter < 160) {
                 if (this.scrollCounter == 0) {
-                    final var spritePixel = this.spritePixelBuffer.get(0);
+                    final var spritePixel = this.spritePixelBuffer[this.spBufferHead];
                     if (spritePixel != null) {
+                        this.spritePixelBuffer[this.spBufferHead] = null;
+                        this.spBufferHead = (this.spBufferHead + 1) % 8;
                         if (spritePixel.bgOverObj) { // スプライトが背景の下にある時
                             if (pixel.color == 0 && spritePixel.color != (byte) 255) {
                                 // 背景色が黒で，スプライトが透過色でなければスプライトを描画
@@ -713,8 +713,6 @@ class Ppu implements IODevice {
                                 pixel = spritePixel;
                             }
                         }
-                        this.spritePixelBuffer.remove(0);
-                        this.spritePixelBuffer.add(null);
                     }
                     if (Ppu.this.lcdControl.isLCDEnable()) {
                         this.lcd.draw(pixel.color);
