@@ -1,7 +1,7 @@
 package Model;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 class Ppu implements IODevice {
@@ -517,7 +517,7 @@ class Ppu implements IODevice {
 
         @Override
         void pushPixelToFIFO() {
-            final var pixels = new ArrayList<Pixel>();
+            final var pixels = new ArrayList<Pixel>(8);
             for (int i = 7; i >= 0; i--) {
                 final int lowBit = (this.tileDataLow >>> i) & 1;
                 final int highBit = (this.tileDataHigh >>> i) & 1;
@@ -645,7 +645,7 @@ class Ppu implements IODevice {
                     final byte colorIndex = (byte) ((highBit << 1) | lowBit);
                     final byte pixelData = this.mapColorIndexToColor(colorIndex);
                     final Pixel pixel = new Pixel(pixelData, 0, 0, false);
-                    fifo.offerLast(pixel);
+                    fifo.setBGPixel(pixel);
                 }
                 this.state = State.GET_TILE;
             }
@@ -660,17 +660,20 @@ class Ppu implements IODevice {
         }
     }
 
-    private class PixelFIFO extends ArrayDeque<Pixel> {
+    private class PixelFIFO {
         private final Lcd lcd;
         private int pixelCounter = 0;
         private int scrollCounter = 0;
         private final Pixel[] spritePixelBuffer;
         private int spBufferHead = 0;
+        private final Pixel[] pixelBuffer;
+        private int pixelBufferHead = 0;
+        private int pixelBufferTail = 0;
 
         private PixelFIFO(final Lcd lcd) {
-            super(16); // FIFO has 16 pixel data
             this.lcd = lcd;
             this.spritePixelBuffer = new Pixel[8];
+            this.pixelBuffer = new Pixel[17];
         }
 
         public void setScrollCounter(int scrollCounter) {
@@ -694,14 +697,18 @@ class Ppu implements IODevice {
             }
         }
 
+        private void setBGPixel(Pixel p) {
+            this.pixelBuffer[this.pixelBufferTail = ++this.pixelBufferTail % 17] = p;
+        }
+
         private void pushPixelsToLCD() {
-            Pixel pixel = this.poll();
-            if (pixel != null && this.pixelCounter < 160) {
-                if (this.scrollCounter == 0) {
+            if (this.pixelBufferHead != this.pixelBufferTail && this.pixelCounter < 160) {
+                Pixel pixel = this.pixelBuffer[this.pixelBufferHead = ++this.pixelBufferHead % 17];
+                if (this.scrollCounter-- <= 0) {
                     final var spritePixel = this.spritePixelBuffer[this.spBufferHead];
                     if (spritePixel != null) {
-                        this.spritePixelBuffer[this.spBufferHead] = null;
-                        this.spBufferHead = (this.spBufferHead + 1) % 8;
+                        this.spritePixelBuffer[spBufferHead] = null;
+                        this.spBufferHead = ++this.spBufferHead % 8;
                         if (spritePixel.bgOverObj) { // スプライトが背景の下にある時
                             if (pixel.color == 0 && spritePixel.color != (byte) 255) {
                                 // 背景色が黒で，スプライトが透過色でなければスプライトを描画
@@ -720,14 +727,18 @@ class Ppu implements IODevice {
                         this.lcd.draw((byte) 255);
                     }
                     this.pixelCounter++;
-                } else {
-                    this.scrollCounter--;
                 }
             }
         }
 
         private boolean hasEnoughSpace() {
-            return this.size() <= 8;
+            return (this.pixelBufferTail - this.pixelBufferHead) % 16 <= 8;
+        }
+
+        public void clear() {
+            this.pixelBufferHead = this.pixelBufferTail = 0;
+            this.spBufferHead = 0;
+            Arrays.fill(this.spritePixelBuffer, null);
         }
 
         public void reset() {
