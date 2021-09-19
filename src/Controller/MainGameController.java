@@ -12,6 +12,10 @@ public record MainGameController(MainGameView view, GameBoy model) implements Pr
         final var menuBar = view.getJMenuBar();
         menuBar.getMenu(0).getItem(0).addActionListener(new FileLoader(view, model));
         menuBar.getMenu(1).getItem(0).addActionListener(new PowerOnListener(view, model));
+        for (int i = 0; i < 5; i++) {
+            final var item = menuBar.getMenu(2).getItem(i);
+            item.addActionListener(new ScreenScaleController(view, i + 1));
+        }
         view.addKeyListener(new JoyPadInputListener(view, model));
         view.setTransferHandler(new FileDropController(model));
         model.addPropertyChangeListener(this);
