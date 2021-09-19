@@ -11,9 +11,7 @@ record PowerOnListener(MainGameView view, GameBoy model) implements ActionListen
     @Override
     public void actionPerformed(ActionEvent e) {
         final var service = this.model.getService();
-        service.scheduleAtFixedRate(() -> {
-            this.model.powerOn();
-        }, 0, 17, TimeUnit.MILLISECONDS);
+        service.scheduleAtFixedRate(this.model::powerOn, 0, 17, TimeUnit.MILLISECONDS);
         this.view.getJMenuBar().getMenu(1).getItem(0).setEnabled(false);
     }
 }
