@@ -15,6 +15,8 @@ record FileLoader(JFrame view, GameBoy model) implements ActionListener {
             case JFileChooser.APPROVE_OPTION -> {
                 final var filePath = chooser.getSelectedFile().getAbsolutePath();
                 model.loadCartridge(filePath);
+                final var info = model.getCartridgeInfo();
+                this.view.setTitle(info.title());
             }
             case JFileChooser.CANCEL_OPTION -> System.out.println("キャンセル");
             // TODO send error message if some error occurred

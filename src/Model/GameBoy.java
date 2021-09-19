@@ -119,6 +119,10 @@ public class GameBoy {
         pcs.firePropertyChange("success", false, true);
     }
 
+    public CartridgeInfo getCartridgeInfo() {
+        return cartridge.getCartridgeInfo();
+    }
+
     public void powerOn() {
         if (this.cartridge != null) {
             this.run();

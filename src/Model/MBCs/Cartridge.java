@@ -50,6 +50,10 @@ public abstract class Cartridge implements IODevice {
         return message.toString();
     }
 
+    public CartridgeInfo getCartridgeInfo() {
+        return cartridgeInfo;
+    }
+
     public static Cartridge getRom(final CartridgeInfo cartridgeInfo) {
         final var bankNum = Byte.toUnsignedInt(cartridgeInfo.cartridgeType());
         return switch (bankNum) {
