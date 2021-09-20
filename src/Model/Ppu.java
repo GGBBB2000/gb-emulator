@@ -3,6 +3,8 @@ package Model;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 class Ppu implements IODevice {
     final LcdControl lcdControl;
@@ -79,6 +81,7 @@ class Ppu implements IODevice {
                     final var bigSpriteMode = !this.lcdControl.isOBJ_Square();
                     this.spriteBuffer.loadSprite(ly, bigSpriteMode);
                     if ((this.cycleSum % lineCycle) - cycle >= 80) {
+                        this.spriteBuffer.sortByX();
                         this.pixelFIFO.setScrollCounter(Byte.toUnsignedInt(this.scx));
                         this.mode = PPU_MODE.DRAWING;
                     }
@@ -86,7 +89,7 @@ class Ppu implements IODevice {
                 case DRAWING -> { // DRAWING takes 43-72 T-cycles
                     cycle -= 2;
                     final var pixelCount = this.pixelFIFO.getPixelCount();
-                    if (this.lcdControl.isOBJEnable() && this.spriteBuffer.hasSprite() && this.spriteBuffer.hasSpriteAt(pixelCount)) {
+                    if (this.lcdControl.isOBJEnable() && this.spriteBuffer.hasSpriteAt(pixelCount)) {
                         this.spriteFetcher.step();
                     } else {
                         this.bgFetcher.step();
@@ -330,13 +333,13 @@ class Ppu implements IODevice {
                                    int paletteNum, int tileBank, int colorPaletteNum) {
     }
 
-    private class SpriteBuffer {
-        final ArrayList<ObjectAttribute> buffer;
+    private static class SpriteBuffer {
+        ArrayList<ObjectAttribute> buffer;
         final ObjectAttributeTable table;
         int tableIndex = 0;
 
         SpriteBuffer(ObjectAttributeTable table) {
-            this.buffer = new ArrayList<>();
+            this.buffer = new ArrayList<>(10);
             this.table = table;
         }
 
@@ -358,33 +361,22 @@ class Ppu implements IODevice {
             tableIndex++;
         }
 
-        public boolean hasSprite() {
-            return this.buffer.size() > 0;
+        public void sortByX() {
+            this.buffer = (ArrayList<ObjectAttribute>) this.buffer.stream()
+                    .sorted(Comparator.comparing(ObjectAttribute::x))
+                    .collect(Collectors.toList());
         }
 
         public boolean hasSpriteAt(int x) {
-            for (final var sprite : this.buffer) {
-                final var spriteFound = sprite.x() - 8 <= x;
-                if (spriteFound) {
-                    return true;
-                }
-            }
-            return false;
+            return this.buffer.size() > 0 && this.buffer.get(0).x - 8 <= x;
         }
 
-        public ObjectAttribute getSpriteAt(int x) {
-            for (final var sprite : this.buffer) {
-                final var spriteFound = sprite.x() - 8 <= x;
-                if (spriteFound) {
-                    return sprite;
-                }
-            }
-            return null; // program will not reach here!
-
+        public ObjectAttribute getSprite() {
+            return this.buffer.get(0);
         }
 
-        public void removeSprite(ObjectAttribute o) {
-            this.buffer.remove(o);
+        public void removeSprite() {
+            this.buffer.remove(0);
         }
     }
 
@@ -478,8 +470,7 @@ class Ppu implements IODevice {
 
         @Override
         void getTile() {
-            final var x = Ppu.this.pixelFIFO.getPixelCount();
-            this.attribute = this.spriteBuffer.getSpriteAt(x);
+            this.attribute = this.spriteBuffer.getSprite();
             assert this.attribute != null;
             this.tileNum = this.attribute.tileIndex;
             this.state = State.GET_DATA_LOW;
@@ -530,7 +521,7 @@ class Ppu implements IODevice {
                 Collections.reverse(pixels);
             }
             Ppu.this.pixelFIFO.setSpritePixelBuffer(pixels);
-            this.spriteBuffer.removeSprite(this.attribute);
+            this.spriteBuffer.removeSprite();
             this.state = State.GET_TILE;
         }
 
