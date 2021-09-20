@@ -25,7 +25,7 @@ public record MainGameController(MainGameView view, GameBoy model) implements Pr
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         final var p = evt.getPropertyName();
-        if (p.equals("loadFiled")) {
+        if (p.equals("loadFailed")) {
             JOptionPane.showMessageDialog(this.view, "ファイルの読み込み中にエラーが発生しました", "loading error", JOptionPane.ERROR_MESSAGE);
         } else if (p.equals("success")) {
             // index 1 ...[Machine]
