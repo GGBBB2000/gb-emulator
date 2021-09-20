@@ -22,7 +22,7 @@ public class MainGameView extends JFrame {
         this.jPanel.add(this.lcd);
 
         this.setContentPane(this.jPanel);
-        this.setSize(200, 220);
+        this.setResizable(false);
         this.setVisible(true);
     }
 
@@ -40,9 +40,11 @@ public class MainGameView extends JFrame {
         jMenuBar.add(machine);
 
         final var view = new JMenu("View");
+        final var group = new ButtonGroup();
         for (int i = 1; i <= 5; i++) {
-            final var menuStr = String.format("%d x %d", i, i);
-            view.add(menuStr);
+            final var item = new JRadioButtonMenuItem(String.format("%d x %d", i, i));
+            group.add(item);
+            view.add(item);
         }
         jMenuBar.add(view);
 
