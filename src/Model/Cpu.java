@@ -208,16 +208,18 @@ class Cpu implements IODevice {
         }
         final var op = readImmediateN();
         final var instInfo = parse(op);
+        int cycle = 0;
         try {
-            execInstruction(instInfo);
+            cycle = execInstruction(instInfo) + instInfo.cycle();
         } catch (ExecutionControl.NotImplementedException | IllegalArgumentException e) {
             e.printStackTrace();
         }
         //System.out.printf("%-20s %s IME=%b\n", instInfo, this.register.toString(), this.imeFlag);
-        return instInfo.cycle();
+        return cycle;
     }
 
-    private void execInstruction(final InstructionInfo instInfo) throws ExecutionControl.NotImplementedException {
+    private int execInstruction(final InstructionInfo instInfo) throws ExecutionControl.NotImplementedException {
+        int additionalCycle = 0;
         switch (instInfo.instruction()) {
             case LD -> { // 8bit LD
                 final byte data = this.get8bitDataByParam(instInfo.from());
@@ -585,23 +587,47 @@ class Cpu implements IODevice {
             }
             case JP -> {
                 final var jumpAdder = this.get16bitDataByParam(instInfo.from());
-                this.register.pc = switch (instInfo.to()) {
-                    case CC_C -> (this.register.getFC()) ? jumpAdder : this.register.pc;
-                    case CC_NC -> (!this.register.getFC()) ? jumpAdder : this.register.pc;
-                    case CC_Z -> (this.register.getZ()) ? jumpAdder : this.register.pc;
-                    case CC_NZ -> (!this.register.getZ()) ? jumpAdder : this.register.pc;
-                    default -> jumpAdder;
-                };
+                switch (instInfo.to()) {
+                    case CC_C -> {
+                        this.register.pc = (this.register.getFC()) ? jumpAdder : this.register.pc;
+                        additionalCycle = 4;
+                    }
+                    case CC_NC -> {
+                        this.register.pc = (!this.register.getFC()) ? jumpAdder : this.register.pc;
+                        additionalCycle = 4;
+                    }
+                    case CC_Z -> {
+                        this.register.pc = (this.register.getZ()) ? jumpAdder : this.register.pc;
+                        additionalCycle = 4;
+                    }
+                    case CC_NZ -> {
+                        this.register.pc = (!this.register.getZ()) ? jumpAdder : this.register.pc;
+                        additionalCycle = 4;
+                    }
+                    default -> this.register.pc = jumpAdder;
+                }
             }
             case JR -> {
                 final var n = this.get8bitDataByParam(instInfo.from());
-                this.register.pc += switch (instInfo.to()) {
-                    case CC_C -> (this.register.getFC()) ? n : 0;
-                    case CC_NC -> (!this.register.getFC()) ? n : 0;
-                    case CC_Z -> (this.register.getZ()) ? n : 0;
-                    case CC_NZ -> (!this.register.getZ()) ? n : 0;
-                    default -> n;
-                };
+                switch (instInfo.to()) {
+                    case CC_C -> {
+                        this.register.pc += (this.register.getFC()) ? n : 0;
+                        additionalCycle += (this.register.getFC()) ? 4 : 0;
+                    }
+                    case CC_NC -> {
+                        this.register.pc += (!this.register.getFC()) ? n : 0;
+                        additionalCycle += (!this.register.getFC()) ? 4 : 0;
+                    }
+                    case CC_Z -> {
+                        this.register.pc += (this.register.getZ()) ? n : 0;
+                        additionalCycle += (this.register.getZ()) ? 4 : 0;
+                    }
+                    case CC_NZ -> {
+                        this.register.pc += (!this.register.getZ()) ? n : 0;
+                        additionalCycle += (!this.register.getZ()) ? 4 : 0;
+                    }
+                    default -> this.register.pc += n;
+                }
             }
              case CALL -> { // Calls
                 int address = this.get16bitDataByParam(instInfo.from());
@@ -610,6 +636,7 @@ class Cpu implements IODevice {
                     case CC_C -> {
                         if (this.register.getFC()) {
                             this.push2Byte(this.register.pc);
+                            additionalCycle += 12;
                         } else {
                             address = this.register.pc;
                         }
@@ -617,6 +644,7 @@ class Cpu implements IODevice {
                     case CC_NC -> {
                         if (!this.register.getFC()) {
                             this.push2Byte(this.register.pc);
+                            additionalCycle = 12;
                         } else {
                             address = this.register.pc;
                         }
@@ -624,6 +652,7 @@ class Cpu implements IODevice {
                     case CC_Z -> {
                         if (this.register.getZ()) {
                             this.push2Byte(this.register.pc);
+                            additionalCycle = 12;
                         } else {
                             address = this.register.pc;
                         }
@@ -631,6 +660,7 @@ class Cpu implements IODevice {
                     case CC_NZ -> {
                         if (!this.register.getZ()) {
                             this.push2Byte(this.register.pc);
+                            additionalCycle = 12;
                         } else {
                             address = this.register.pc;
                         }
@@ -661,21 +691,25 @@ class Cpu implements IODevice {
                     case CC_C -> {
                         if (this.register.getFC()) {
                             address = this.pop2Byte();
+                            additionalCycle = 12;
                         }
                     }
                     case CC_NC -> {
                          if (!this.register.getFC()) {
                              address = this.pop2Byte();
+                             additionalCycle = 12;
                          }
                      }
                      case CC_Z -> {
                          if (this.register.getZ()) {
                              address = this.pop2Byte();
+                             additionalCycle = 12;
                          }
                      }
                      case CC_NZ -> {
                          if (!this.register.getZ()) {
                              address = this.pop2Byte();
+                             additionalCycle = 12;
                          }
                      }
                      default -> throw new IllegalArgumentException(String.format("CALL: [%s] Illegal argument!\n", instInfo.to()));
@@ -689,5 +723,6 @@ class Cpu implements IODevice {
             }
             default -> throw new ExecutionControl.NotImplementedException(String.format("[%s @ 0x%4X]: not implemented or Illegal instruction!\n", instInfo, this.register.pc));
         }
+        return additionalCycle;
     }
 }
