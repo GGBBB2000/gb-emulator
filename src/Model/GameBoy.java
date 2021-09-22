@@ -11,10 +11,13 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class GameBoy {
     final PropertyChangeSupport pcs;
     final ScheduledExecutorService service;
+    ScheduledFuture<?> future;
     final Cpu cpu;
     final Bus bus;
     final Ppu ppu;
@@ -125,8 +128,24 @@ public class GameBoy {
 
     public void powerOn() {
         if (this.cartridge != null) {
-            this.run();
+            this.startTask();
         }
+    }
+
+    private void startTask() {
+        if (future == null || future.cancel(true)) {
+            this.reset();
+            future = service.scheduleAtFixedRate(this::run, 0, 17, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    public void reset() {
+        this.cpu.reset();
+        this.ppu.reset();
+        this.interruptRegister.reset();
+        this.timer.reset();
+        this.dividerRegister.reset();
+        this.lcd.reset();
     }
 
     public void run() {

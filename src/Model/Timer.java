@@ -29,6 +29,14 @@ class Timer implements IODevice {
         this.timerEnable = false;
     }
 
+    void reset() {
+        this.timerCounter = 0;
+        this.timerModulo = 0;
+        this.timerControl = 0;
+        this.inputClock = 0;
+        this.timerEnable = false;
+    }
+
     void addCycle(final int cycle) {
         if (this.timerEnable) {
             this.cycleSum += cycle;

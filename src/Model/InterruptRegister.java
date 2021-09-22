@@ -81,4 +81,9 @@ class InterruptRegister {
             this.interruptRequestFlag &= 0b1110_1111;
         }
     }
+
+    public void reset() {
+        this.interruptRequestFlag = 0;
+        this.interruptEnable = 0;
+    }
 }

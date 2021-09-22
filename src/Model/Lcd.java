@@ -30,7 +30,7 @@ class Lcd {
         Arrays.fill(this.lcd, (byte) 255);
         this.pcs.firePropertyChange("LCD_DRAW", false, this.isEnabled);
         this.pixelCounter = 0;
-        this.isEnabled = false;
+        this.isEnabled = true;
     }
 
     public byte[] getData() {

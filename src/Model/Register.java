@@ -10,6 +10,10 @@ class Register {
 
 
     Register() {
+        this.reset();
+    }
+
+    public void reset() {
         af = 0;
         bc = 0;
         de = 0;
@@ -18,7 +22,9 @@ class Register {
         pc = 0x100; // entry point
     }
 
-    public byte getA() { return (byte) ((af & 0xFF00) >> 8); }
+    public byte getA() {
+        return (byte) ((af & 0xFF00) >> 8);
+    }
 
     public void setA(byte data) {
         final var upper = data << 8;

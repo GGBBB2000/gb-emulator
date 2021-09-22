@@ -1,6 +1,7 @@
 package Controller;
 
 import Model.GameBoy;
+import View.MainGameView;
 
 import javax.swing.*;
 import java.awt.datatransfer.DataFlavor;
@@ -9,10 +10,13 @@ import java.util.List;
 
 public class FileDropController extends TransferHandler {
     final GameBoy model;
-
+    final MainGameView view;
     static final DataFlavor fileFlavor = DataFlavor.javaFileListFlavor;
 
-    FileDropController(GameBoy model) { this.model = model; }
+    FileDropController(MainGameView view, GameBoy model) {
+        this.view = view;
+        this.model = model;
+    }
 
     @Override
     public boolean canImport(TransferHandler.TransferSupport support) {
@@ -27,14 +31,16 @@ public class FileDropController extends TransferHandler {
         List<File> data;
         try {
             var t = support.getTransferable();
-            data = (List<File>)t.getTransferData(fileFlavor);
-        } catch (Exception e){
+            data = (List<File>) t.getTransferData(fileFlavor);
+        } catch (Exception e) {
             return false;
         }
 
         if (data.size() != 1) return false;
-
         model.loadCartridge(data.get(0).getAbsolutePath());
+        final var info = model.getCartridgeInfo();
+        this.view.setTitle(info.title());
+        model.powerOn();
         return true;
     }
 }

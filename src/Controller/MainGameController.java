@@ -22,7 +22,7 @@ public record MainGameController(MainGameView view, GameBoy model) implements Pr
         viewMenu.getItem(0).doClick();
 
         view.addKeyListener(new JoyPadInputListener(view, model));
-        view.setTransferHandler(new FileDropController(model));
+        view.setTransferHandler(new FileDropController(view, model));
         model.addPropertyChangeListener(this);
         model.addLcdListener(new LcdController(view, model));
     }

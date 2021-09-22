@@ -70,6 +70,29 @@ class Ppu implements IODevice {
         this.cycleSum = 0;
     }
 
+    public void reset() {
+        this.mode = PPU_MODE.OAM_SCAN;
+        this.lcdControl.reset();
+        this.lcdStat.reset();
+        this.pixelFIFO.reset();
+        this.pixelFIFO.clear();
+        this.bgFetcher.reset();
+        this.bgFetcher.resetWindowLineCounter();
+        this.oamTable.reset();
+        this.spriteBuffer.reset();
+        this.spriteFetcher.reset();
+        this.scy = 0;
+        this.scx = 0;
+        this.ly = 0;
+        this.lyc = 0;
+        this.bgp = 0;
+        this.obp0 = 0;
+        this.obp1 = 0;
+        this.wy = 0;
+        this.wx = 0;
+        this.cycleSum = 0;
+    }
+
     public void run(int cycle) {
         final var lineCycle = 456; // sum of cycle to render a line
         this.cycleSum += cycle;
@@ -213,7 +236,11 @@ class Ppu implements IODevice {
         bit0: BG and Window enable/priority 0=off 1=on
         */
 
-        byte register = (byte)0b1000_0000;
+        byte register;
+
+        void reset() {
+            this.register = 0;
+        }
 
         void setRegister(byte register) {
             this.register = register;
@@ -275,9 +302,13 @@ class Ppu implements IODevice {
         boolean isEqualLyLyc;
 
         LcdStat() {
-            this.register = (byte)0b1000_0000;
+            this.reset();
+        }
+
+        void reset() {
+            this.register = 0;
             this.mode = Ppu.this.mode;
-            this.isEqualLyLyc = Ppu.this.ly == Ppu.this.lyc;
+            this.isEqualLyLyc = false;
         }
 
         void setRegister(final byte data) {
@@ -409,6 +440,12 @@ class Ppu implements IODevice {
             final int tileBank = flags & 0b0000_1000 >> 3;
             final int colorPaletteNum = flags & 0b11;
             return new ObjectAttribute(y, x, tileIndex, bgOverObj, yFlip, xFlip, paletteNum, tileBank, colorPaletteNum);
+        }
+
+        public void reset() {
+            for (int i = 0; i < 40 * 4; i++) {
+                this.attributes[i] = 0;
+            }
         }
     }
 
@@ -735,6 +772,7 @@ class Ppu implements IODevice {
         public void reset() {
             this.clear();
             this.pixelCounter = 0;
+            this.scrollCounter = 0;
         }
     }
 }

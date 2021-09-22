@@ -17,6 +17,13 @@ class Cpu implements IODevice {
         this.isStopped = false;
     }
 
+    public void reset() {
+        this.register.reset();
+        this.imeFlag = false;
+        this.isHalt = false;
+        this.isStopped = false;
+    }
+
     public void resume() {
         this.isStopped = false;
     }
